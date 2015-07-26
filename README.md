@@ -33,5 +33,15 @@ The tests are made on this hardware
 ![Db9 test hardware](images/pyserialnotify_hw_test.png)
 
 
+## TODO
 
+- use log instead of print in Db9
+- make tests case
+- make a notification factory that use Db9
+- implement other notification type
+- make server listening for incomming notification (json, yaml, ?? /  http,https)
+- incomming plugins for various sources: 
+
+  - alerte with dif levels: nagios, shinken ...
+  - incomming mail: thunderbid, mutt, fetchmail,  ...
 
