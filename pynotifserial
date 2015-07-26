@@ -5,7 +5,8 @@
 # FIXME: don't know yet how to manage PIN3.
 #
 
-import sys, time
+import sys
+import time
 
 from db9 import Db9
 
@@ -14,24 +15,25 @@ YELLOW_LED = Db9.PIN4
 RED_LED = Db9.PIN7
 
 
-def usage ():
+def usage():
 
     print "usage: %s <tty>\n\n" % sys.argv[0].split('/')[-1]
 
 
-def switchon( pin , all_state ):
+def switchon(pin, all_state):
     print "[+] - switch on pin %s" % pin
     return all_state | pin
 
-def switchoff( pin , all_state ):
+
+def switchoff(pin, all_state):
     print "[+] - switch off pin %s" % pin
     return all_state & ~pin
 
 
-def main( tty ):
+def main(tty):
     out = Db9(tty)
     out.connect()
-    
+
     print "[+] - Checking leds"
     out.switch_off(Db9.ALL_OUTPUT)
 
@@ -72,10 +74,9 @@ def main( tty ):
 if __name__ == '__main__':
 
     try:
-        main( sys.argv[1] )
+        main(sys.argv[1])
     except IndexError:
-        usage ()
-        
+        usage()
 
-	
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
