@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+#
+#
+# Used to control serial electric I/O to send notification by serial port
+# FIXME: don't know yet how to manage PIN3.
+#
+
+import sys, time
+
+from db9 import Db9
+
+GREEN_LED = Db9.PIN3
+YELLOW_LED = Db9.PIN4
+RED_LED = Db9.PIN7
+
+
+def usage ():
+
+    print "usage: %s <tty>\n\n" % sys.argv[0].split('/')[-1]
+
+
+def switchon( pin , all_state ):
+    print "[+] - switch on pin %s" % pin
+    return all_state | pin
+
+def switchoff( pin , all_state ):
+    print "[+] - switch off pin %s" % pin
+    return all_state & ~pin
+
+
+def main( tty ):
+    out = Db9(tty)
+    out.connect()
+    
+    print "[+] - Checking leds"
+    out.switch_off(Db9.ALL_OUTPUT)
+
+    for i in xrange(6):
+        time.sleep(0.1)
+        out.switch_on(GREEN_LED)
+        time.sleep(0.1)
+        out.switch_on(YELLOW_LED)
+        time.sleep(0.1)
+        out.switch_on(RED_LED)
+        time.sleep(0.1)
+        out.switch_off(RED_LED)
+        time.sleep(0.1)
+        out.switch_off(YELLOW_LED)
+        time.sleep(0.1)
+        out.switch_off(GREEN_LED)
+        time.sleep(0.1)
+
+    time.sleep(1)
+
+    print "[+] - set all entries down"
+    out.switch_off(Db9.ALL_OUTPUT)
+    print "[+] - sleeping during 5 sec"
+    time.sleep(5)
+    out.switch_on(GREEN_LED)
+    print "[+] - sleeping during 5 sec"
+    time.sleep(5)
+    out.switch_on(YELLOW_LED)
+    print "[+] - sleeping during 5 sec"
+    time.sleep(5)
+    out.switch_on(RED_LED)
+    print "[+] - sleeping during 5 sec"
+    time.sleep(5)
+
+    out.disconnect()
+
+
+if __name__ == '__main__':
+
+    try:
+        main( sys.argv[1] )
+    except IndexError:
+        usage ()
+        
+
+	
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
