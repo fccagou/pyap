@@ -5,8 +5,13 @@
 # FIXME: don't know yet how to manage PIN3.
 #
 
+import os
 import sys
 import time
+
+pathname, scriptname = os.path.split(sys.argv[0])
+
+sys.path.append(os.path.join(pathname, '..'))
 
 from db9 import Db9
 
