@@ -27,18 +27,15 @@ class Db9(object):
         self.__tty = tty
 
     def connect(self):
-        print "[+] - using  %s" % self.__tty
         self.__fd = open(self.__tty, 'w+')
         self.__state = fcntl.ioctl(
             self.__fd, termios.TIOCMGET, '\000\000\000\000\000\000\000\000')
 
     def switch_on(self, pin):
-        print "[+] - switch on pin %s" % self.__pins.index(pin)
         self.__state = fcntl.ioctl(self.__fd, termios.TIOCMSET, struct.pack(
             'l', struct.unpack('l', self.__state)[0] | pin))
 
     def switch_off(self, pin):
-        print "[+] - switch off pin %s" % self.__pins.index(pin)
         self.__state = fcntl.ioctl(self.__fd, termios.TIOCMSET, struct.pack(
             'l', struct.unpack('l', self.__state)[0] & ~pin))
 
