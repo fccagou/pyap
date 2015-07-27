@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+#
+
 import os
 import time
 import thread
@@ -16,7 +19,7 @@ WARNING_LED = Db9.PIN4 | Db9.PIN7
 ACK = 0
 
 current_status = OK_LED
-got_security_alert = None 
+got_security_alert = None
 
 
 def blink():
@@ -26,14 +29,12 @@ def blink():
 
     while got_security_alert is not None:
 
-	serial_output.switch_on(CRITICAL_LED)
-	serial_output.switch_off(OK_LED)
-	time.sleep(0.2)
-	serial_output.switch_off(CRITICAL_LED)
-	serial_output.switch_on(OK_LED)
-	time.sleep(0.2)
-
-    
+        serial_output.switch_on(CRITICAL_LED)
+        serial_output.switch_off(OK_LED)
+        time.sleep(0.2)
+        serial_output.switch_off(CRITICAL_LED)
+        serial_output.switch_on(OK_LED)
+        time.sleep(0.2)
 
 
 def switch_on_alert(start_response, led):
@@ -42,8 +43,8 @@ def switch_on_alert(start_response, led):
     global current_status
 
     if got_security_alert is None:
-	    serial_output.switch_off(Db9.ALL_OUTPUT)
-	    serial_output.switch_on(led)
+        serial_output.switch_off(Db9.ALL_OUTPUT)
+        serial_output.switch_on(led)
 
     current_status = led
 
@@ -85,8 +86,8 @@ def alert_security(start_response):
     global got_security_alert
 
     if got_security_alert is None:
-    	got_security_alert = 1
-    	thread.start_new_thread(blink, () )
+        got_security_alert = 1
+        thread.start_new_thread(blink, ())
 
     status = '200 OK'
     output = "security alerte !\n"
@@ -94,7 +95,7 @@ def alert_security(start_response):
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
     return [output]
-	
+
 
 def alert_security_ack(start_response):
 
@@ -103,7 +104,6 @@ def alert_security_ack(start_response):
     # wait thread ending
     time.sleep(1)
     return switch_on_alert(start_response, current_status)
-
 
 
 def alert_ack(start_response):
@@ -134,7 +134,7 @@ def pynotify_application(environ, start_response):
     return notfound(start_response, environ['PATH_INFO'])
 
 
-serial_output=Db9('/dev/ttyUSB0')
+serial_output = Db9('/dev/ttyUSB0')
 serial_output.connect()
 serial_output.switch_off(Db9.ALL_OUTPUT)
 serial_output.switch_on(OK_LED)
