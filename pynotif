@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 
+import sys
 import os
 import time
 import thread
@@ -20,21 +21,61 @@ ACK = 0
 
 current_status = OK_LED
 got_security_alert = None
+got_unknown_state = None
 
 
-def blink():
+def blink(led, state):
+
+    global serial_output
+
+    serial_output.switch_off(Db9.ALL_OUTPUT)
+
+    while state is not None:
+
+        serial_output.switch_on(led)
+        # serial_output.switch_off(WARNING_LED)
+        time.sleep(0.2)
+        serial_output.switch_off(led)
+        # serial_output.switch_on(WARNING_LED)
+        time.sleep(0.2)
+
+
+import urllib2
+import json
+
+
+def nagios_get_status(url):
 
     global serial_output
     global got_security_alert
 
-    while got_security_alert is not None:
+    while 1:
+        # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
+        if got_security_alert is None:
+            nagios_response = urllib2.urlopen(url).read()
+            print "[i] - nagios status ( %s )" % nagios_response
+            nagios_infos = json.loads(nagios_response)
+            services = nagios_infos['services']
 
-        serial_output.switch_on(CRITICAL_LED)
-        serial_output.switch_off(OK_LED)
-        time.sleep(0.2)
-        serial_output.switch_off(CRITICAL_LED)
-        serial_output.switch_on(OK_LED)
-        time.sleep(0.2)
+            if services['crit'] > 0:
+                got_unknown_state = None
+                serial_output.switch_off(Db9.ALL_OUTPUT)
+                serial_output.switch_on(CRITICAL_LED)
+            elif services['warn'] > 0:
+                got_unknown_state = None
+                serial_output.switch_off(Db9.ALL_OUTPUT)
+                serial_output.switch_on(WARNING_LED)
+            elif services['unknown'] > 0:
+                got_unknown_state = 1
+                thread.start_new_thread(blink, (GREEN_LED, got_unknown_state))
+            elif services['ok'] > 0:
+                got_unknown_state = None
+                serial_output.switch_off(Db9.ALL_OUTPUT)
+                serial_output.switch_on(OK_LED)
+            else:
+                print "[!] - json error"
+
+        time.sleep(30)
 
 
 def switch_on_alert(start_response, led):
@@ -87,7 +128,7 @@ def alert_security(start_response):
 
     if got_security_alert is None:
         got_security_alert = 1
-        thread.start_new_thread(blink, ())
+        thread.start_new_thread(blink, (CRITICAL_LED, got_security_alert))
 
     status = '200 OK'
     output = "security alerte !\n"
@@ -103,6 +144,7 @@ def alert_security_ack(start_response):
     got_security_alert = None
     # wait thread ending
     time.sleep(1)
+    serial_output.switch_off(Db9.ALL_OUTPUT)
     return switch_on_alert(start_response, current_status)
 
 
@@ -134,14 +176,30 @@ def pynotify_application(environ, start_response):
     return notfound(start_response, environ['PATH_INFO'])
 
 
-serial_output = Db9('/dev/ttyUSB0')
+try:
+    tty = sys.argv[1]
+except:
+    print "Usage: %s /deV/ttyXXX <nagios_url>\n" % sys.argv[0].split('/')[-1]
+    sys.exit(1)
+
+
+try:
+    nagios_url = sys.argv[2]
+    print "[+] - Running nagios poller"
+    thread.start_new_thread(nagios_get_status, (nagios_url,))
+except:
+    pass
+
+serial_output = Db9(tty)
 serial_output.connect()
 serial_output.switch_off(Db9.ALL_OUTPUT)
 serial_output.switch_on(OK_LED)
 
 
 httpd = server.make_server('', port, pynotify_application)
-print "Serving HTTP on port %i..." % port
+
+
+print "[+] - Serving HTTP on port %i..." % port
 # Respond to requests until process is killed
 httpd.serve_forever()
 
