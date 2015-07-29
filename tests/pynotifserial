@@ -61,9 +61,21 @@ def main(tty):
 
     print "[+] - set all entries down"
     out.switch_off(Db9.ALL_OUTPUT)
+    print "[+] - is GREEN_LED on ?"
+    if out.is_on(GREEN_LED):
+        print '   [!] - yes ??? GREEN_LED should be off !'
+    else:
+        print '   [+] - no ... OK, that\'s fine'
+        
     print "[+] - sleeping during 5 sec"
     time.sleep(5)
+    print "[+] - switch on GREEN_LED"
     out.switch_on(GREEN_LED)
+    print "[+] - is GREEN_LED really on ?"
+    if out.is_on(GREEN_LED):
+        print '   [+] - yes ... OK, that\'s fine'
+    else:
+        print '   [!] - no ??? GREEN_LED should be on !'
     print "[+] - sleeping during 5 sec"
     time.sleep(5)
     out.switch_on(YELLOW_LED)
