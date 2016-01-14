@@ -23,14 +23,26 @@ current_status = OK_LED
 got_security_alert = None
 got_unknown_state = None
 
+blink_secu_alert=0
+blink_unk_alert=1
+
+
+
+blinks_states=[]
+blinks_states.append(None)
+blinks_states.append(None)
+
+
+
 
 def blink(led, state):
 
     global serial_output
+    global blinks_states
 
     serial_output.switch_off(Db9.ALL_OUTPUT)
 
-    while state is not None:
+    while blinks_states[state] is not None:
 
         serial_output.switch_on(led)
         # serial_output.switch_off(WARNING_LED)
@@ -47,43 +59,47 @@ import json
 def nagios_get_status(url):
 
     global serial_output
-    global got_security_alert
+    global blinks_states
 
     while 1:
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
-        if got_security_alert is None:
-            nagios_response = urllib2.urlopen(url).read()
-            print "[i] - nagios status ( %s )" % nagios_response
-            nagios_infos = json.loads(nagios_response)
-            services = nagios_infos['services']
+        if blinks_states[blink_secu_alert] is None:
+	    try:
+	            nagios_response = urllib2.urlopen(url).read()
+	            print "[i] - nagios status ( %s )" % nagios_response
+	            nagios_infos = json.loads(nagios_response)
+	            services = nagios_infos['services']
+	
+	            if services['crit'] > 0:
+	                blinks_states[blink_unk_alert] = None 
+	                serial_output.switch_off(Db9.ALL_OUTPUT)
+	                serial_output.switch_on(CRITICAL_LED)
+	            elif services['warn'] > 0:
+	                blinks_states[blink_unk_alert] = None 
+	                serial_output.switch_off(Db9.ALL_OUTPUT)
+	                serial_output.switch_on(WARNING_LED)
+	            elif services['unknown'] > 0:
+	                blinks_states[blink_unk_alert] =  1
+	                thread.start_new_thread(blink, (OK_LED, blink_unk_alert))
+	            elif services['ok'] > 0:
+	                blinks_states[blink_unk_alert] = None 
+	                serial_output.switch_off(Db9.ALL_OUTPUT)
+	                serial_output.switch_on(OK_LED)
+	            else:
+	                print "[!] - json error"
+	    except:
+		print "[!] - error while getting status"
 
-            if services['crit'] > 0:
-                got_unknown_state = None
-                serial_output.switch_off(Db9.ALL_OUTPUT)
-                serial_output.switch_on(CRITICAL_LED)
-            elif services['warn'] > 0:
-                got_unknown_state = None
-                serial_output.switch_off(Db9.ALL_OUTPUT)
-                serial_output.switch_on(WARNING_LED)
-            elif services['unknown'] > 0:
-                got_unknown_state = 1
-                thread.start_new_thread(blink, (GREEN_LED, got_unknown_state))
-            elif services['ok'] > 0:
-                got_unknown_state = None
-                serial_output.switch_off(Db9.ALL_OUTPUT)
-                serial_output.switch_on(OK_LED)
-            else:
-                print "[!] - json error"
-
-        time.sleep(30)
+        time.sleep(10)
 
 
 def switch_on_alert(start_response, led):
 
     global serial_output
-    global current_status
+    global current_status 
+    global blinks_states
 
-    if got_security_alert is None:
+    if blinks_states[blink_secu_alert] is None:
         serial_output.switch_off(Db9.ALL_OUTPUT)
         serial_output.switch_on(led)
 
@@ -124,11 +140,11 @@ def alert_ok(start_response):
 
 def alert_security(start_response):
 
-    global got_security_alert
+    global blinks_states
 
-    if got_security_alert is None:
-        got_security_alert = 1
-        thread.start_new_thread(blink, (CRITICAL_LED, got_security_alert))
+    if blinks_states[blink_secu_alert] is None:
+	blinks_states[blink_secu_alert]=1
+        thread.start_new_thread(blink, (CRITICAL_LED, blink_secu_alert))
 
     status = '200 OK'
     output = "security alerte !\n"
@@ -140,8 +156,8 @@ def alert_security(start_response):
 
 def alert_security_ack(start_response):
 
-    global got_security_alert
-    got_security_alert = None
+    global blinks_states
+    blinks_states[blink_secu_alert]=None
     # wait thread ending
     time.sleep(1)
     serial_output.switch_off(Db9.ALL_OUTPUT)
