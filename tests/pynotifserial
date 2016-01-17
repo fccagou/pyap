@@ -15,9 +15,10 @@ sys.path.append(os.path.join(pathname, '..'))
 
 from db9 import Db9
 
-GREEN_LED = Db9.PIN3
-YELLOW_LED = Db9.PIN4
+GREEN_LED = Db9.PIN4
 RED_LED = Db9.PIN7
+# I"m using a bi-color led.
+ORANGE_LED = GREEN_LED | RED_LED
 
 
 def usage():
@@ -46,13 +47,15 @@ def main(tty):
         time.sleep(0.1)
         out.switch_on(GREEN_LED)
         time.sleep(0.1)
-        out.switch_on(YELLOW_LED)
+        out.switch_off(GREEN_LED)
+        out.switch_on(ORANGE_LED)
         time.sleep(0.1)
+        out.switch_off(ORANGE_LED)
         out.switch_on(RED_LED)
         time.sleep(0.1)
         out.switch_off(RED_LED)
         time.sleep(0.1)
-        out.switch_off(YELLOW_LED)
+        out.switch_off(ORANGE_LED)
         time.sleep(0.1)
         out.switch_off(GREEN_LED)
         time.sleep(0.1)
@@ -66,7 +69,7 @@ def main(tty):
         print '   [!] - yes ??? GREEN_LED should be off !'
     else:
         print '   [+] - no ... OK, that\'s fine'
-        
+
     print "[+] - sleeping during 5 sec"
     time.sleep(5)
     print "[+] - switch on GREEN_LED"
@@ -78,9 +81,12 @@ def main(tty):
         print '   [!] - no ??? GREEN_LED should be on !'
     print "[+] - sleeping during 5 sec"
     time.sleep(5)
-    out.switch_on(YELLOW_LED)
+    print "[+] - set orange led"
+    out.switch_on(ORANGE_LED)
     print "[+] - sleeping during 5 sec"
     time.sleep(5)
+    print "[+] - set red led"
+    out.switch_off(GREEN_LED)
     out.switch_on(RED_LED)
     print "[+] - sleeping during 5 sec"
     time.sleep(5)
