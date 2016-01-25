@@ -8,8 +8,7 @@ import thread
 import wsgiref.simple_server as server
 from db9 import Db9
 
-
-port = 8080
+LISTENING_PORT = 8080
 
 OK_LED = Db9.PIN4
 CRITICAL_LED = Db9.PIN7
@@ -32,6 +31,37 @@ blinks_states=[]
 blinks_states.append(None)
 blinks_states.append(None)
 
+serial_output = None
+verbose = False
+
+
+def log(msg):
+    global verbose
+    if verbose:
+        print "[+] - ",msg
+    else:
+        pass
+
+def info(msg):
+    global verbose
+    if verbose:
+        print "[i] - ",msg
+    else:
+        pass
+
+def warning(msg):
+    global verbose
+    if verbose:
+        print "[!] - ",msg
+    else:
+        pass
+
+def error(msg):
+    global verbose
+    if verbose:
+        print "[-] - ",msg
+    else:
+        pass
 
 
 
@@ -56,7 +86,7 @@ import urllib2
 import json
 
 
-def nagios_get_status(url):
+def poller_get_status(url):
 
     global serial_output
     global blinks_states
@@ -64,31 +94,36 @@ def nagios_get_status(url):
     while 1:
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
         if blinks_states[blink_secu_alert] is None:
-	    try:
-	            nagios_response = urllib2.urlopen(url).read()
-	            print "[i] - nagios status ( %s )" % nagios_response
-	            nagios_infos = json.loads(nagios_response)
-	            services = nagios_infos['services']
+            try:
+                services = {'crit':0, 'warn':0, 'unknown':0, 'ok':0}
+                for u in url:
+                    poller_response = urllib2.urlopen(u).read()
+                    info("poller status ( %s )" % poller_response.rstrip())
+                    poller_infos = json.loads(poller_response)
+                    for k in poller_infos['services'].keys():
+                        services[k] += poller_infos['services'][k]
 
-	            if services['crit'] > 0:
-	                blinks_states[blink_unk_alert] = None
-	                serial_output.switch_off(Db9.ALL_OUTPUT)
-	                serial_output.switch_on(CRITICAL_LED)
-	            elif services['warn'] > 0:
-	                blinks_states[blink_unk_alert] = None
-	                serial_output.switch_off(Db9.ALL_OUTPUT)
-	                serial_output.switch_on(WARNING_LED)
-	            elif services['unknown'] > 0:
-	                blinks_states[blink_unk_alert] =  1
-	                thread.start_new_thread(blink, (OK_LED, blink_unk_alert))
-	            elif services['ok'] > 0:
-	                blinks_states[blink_unk_alert] = None
-	                serial_output.switch_off(Db9.ALL_OUTPUT)
-	                serial_output.switch_on(OK_LED)
-	            else:
-	                print "[!] - json error"
-	    except:
-		print "[!] - error while getting status"
+                info("Global status ( %s )" % services)
+
+                if services['crit'] > 0:
+                    blinks_states[blink_unk_alert] = None
+                    serial_output.switch_off(Db9.ALL_OUTPUT)
+                    serial_output.switch_on(CRITICAL_LED)
+                elif services['warn'] > 0:
+                    blinks_states[blink_unk_alert] = None
+                    serial_output.switch_off(Db9.ALL_OUTPUT)
+                    serial_output.switch_on(WARNING_LED)
+                elif services['unknown'] > 0:
+                    blinks_states[blink_unk_alert] =  1
+                    thread.start_new_thread(blink, (OK_LED, blink_unk_alert))
+                elif services['ok'] > 0:
+                    blinks_states[blink_unk_alert] = None
+                    serial_output.switch_off(Db9.ALL_OUTPUT)
+                    serial_output.switch_on(OK_LED)
+                else:
+                    error("json error")
+    	    except:
+                error("error while getting status %s " % (sys.exc_info()[0]))
 
         time.sleep(10)
 
@@ -192,32 +227,75 @@ def pynotify_application(environ, start_response):
     return notfound(start_response, environ['PATH_INFO'])
 
 
-try:
-    tty = sys.argv[1]
-except:
-    print "Usage: %s /deV/ttyXXX <nagios_url>\n" % sys.argv[0].split('/')[-1]
-    sys.exit(1)
+
+def main():
+
+    global serial_output
+    global verbose
 
 
-try:
-    nagios_url = sys.argv[2]
-    print "[+] - Running nagios poller"
-    thread.start_new_thread(nagios_get_status, (nagios_url,))
-except:
-    pass
+    SERIAL_DEVICE='/dev/ttyUSB0'
 
-serial_output = Db9(tty)
-serial_output.connect()
-serial_output.switch_off(Db9.ALL_OUTPUT)
-serial_output.switch_on(OK_LED)
+    try:
+        import argparse
+        parser = argparse.ArgumentParser(
+            description='Notify processor.',
+            )
+        USING_ARGPARSE = True
+    except ImportError:
+        import optparse
+        parser = optparse.OptionParser(
+            description='Notify processor.')
+        parser.parse_args_orig = parser.parse_args
+        parser.parse_args = lambda: parser.parse_args_orig()[0]
+        parser.add_argument = parser.add_option
+        USING_ARGPARSE = False
+
+    parser.add_argument('--conf', '-c',
+                        help='Configuration file.')
+    parser.add_argument('--tty', default=SERIAL_DEVICE,
+                        help="serial device (default=%s)" % SERIAL_DEVICE)
+    parser.add_argument('--port', '-p', default=LISTENING_PORT, type=int,
+                        help='Listening port for status push .')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Verbose.')
+    parser.add_argument('urls', nargs='*',
+                        help='url for http state poller')
 
 
-httpd = server.make_server('', port, pynotify_application)
+
+    args = parser.parse_args()
+
+    if args.conf:
+        execfile(args.conf)
+
+    tty = args.tty
+    verbose = args.verbose
 
 
-print "[+] - Serving HTTP on port %i..." % port
-# Respond to requests until process is killed
-httpd.serve_forever()
+    if args.urls:
+        log("Running http poller")
+        thread.start_new_thread(poller_get_status, (args.urls,))
 
 
-serial_output.disconnect()
+    serial_output = Db9(tty)
+    serial_output.connect()
+    serial_output.switch_off(Db9.ALL_OUTPUT)
+    serial_output.switch_on(OK_LED)
+
+    port = args.port
+
+    httpd = server.make_server('', port, pynotify_application)
+
+    log("Serving HTTP on port %i..." % port)
+    # Respond to requests until process is killed
+    httpd.serve_forever()
+
+
+    serial_output.disconnect()
+
+
+if __name__ == '__main__':
+    main ()
+
+
