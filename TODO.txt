@@ -1,0 +1,12 @@
+*********
+TODO LIST
+*********
+
+
+- have a thread to manage led states doing on/off
+- Use msgQ or something else to send new states to led state manager
+
+
+  pollers   ----> event(level) ------>  led's state manager
+
+- add better logging.

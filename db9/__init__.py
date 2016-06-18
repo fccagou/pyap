@@ -39,6 +39,9 @@ class Db9(object):
         self.__state = fcntl.ioctl(self.__fd, termios.TIOCMSET, struct.pack(
             'l', struct.unpack('l', self.__state)[0] & ~pin))
 
+    def is_on(self,pin):
+        return ((struct.unpack('l',self.__state)[0] & pin) == pin)
+
     def disconnect(self):
         self.__fd.close()
 
