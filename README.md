@@ -16,7 +16,7 @@ Many solutions exist :
 - using commercial solutions like [blink(1)](http://blink1.thingm.com/)
 - or DIY solution
 
-I've chosen DIY solution and begun begun with hardware I have in my cupboard, 
+I've chosen DIY solution and begun begun with hardware I have in my cupboard,
 a USB/Serial cable.
 
 I create the first python class [Db9](#Serial Db9)
@@ -32,7 +32,7 @@ The file [pynotifserial](tests/pynotifserial) is an example.
 The tests are made on this hardware
 
 - pin5 is the Ground
-- pin4 is the green led for ok status 
+- pin4 is the green led for ok status
 - pin7 is the red led for critical status
 - pin3 is unusable this way.
 - Two 1k resistors protect each led
@@ -73,7 +73,7 @@ curl http://127.0.0.1:8080/alert/security/ack
 
 ## nagios poller
 
-Actually `nagios_poller` is a thread in `pynotif` as a test code. It must be coded 
+Actually `nagios_poller` is a thread in `pynotif` as a test code. It must be coded
 in it own program. Pynotif must not do polling AND sending alerts.
 
 If the optional pynotif param (`nagios_url_status`) is set, a thread is started to
@@ -81,17 +81,19 @@ poll informations from the url nagios_url_status. Request must returns json valu
 of nagios services status in the form :
 ```
 {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
-``` 
+```
 
+## blink(1)
+
+Blink(1) led is now usable. see file `blink1-python-update.sh`
 
 ## TODO
 
 - make tests case
 - add errors management
-- use argparse
-- use log instead of print
 - other notification types
-- incoming `pollers` for various sources 
+- add notifier type.
+- incoming `pollers` for various sources
 
   - alerte with dif levels: nagios, shinken ...
   - incomming mail: thunderbid, mutt, fetchmail,  ...
@@ -106,11 +108,11 @@ of nagios services status in the form :
                                    |        |
                                    |        |
                                    V        V
- <----- (poller 1) ----------->  +-----------+ --------> notif type 1 < 
+ <----- (poller 1) ----------->  +-----------+ --------> notif type 1 <
  <-----     .                    |           |                .
  <-----     .              --->  |  pynotif  | ---->          .
  <-----     .                    |           |                .
- <----- (poller x) ----------->  +-----------+ --------> notif type n < 
-      
+ <----- (poller x) ----------->  +-----------+ --------> notif type n <
+
 
 ```
