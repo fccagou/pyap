@@ -24,10 +24,12 @@ got_unknown_state = None
 
 blink_secu_alert=0
 blink_unk_alert=1
+blink_error=2
 
 
 
 blinks_states=[]
+blinks_states.append(None)
 blinks_states.append(None)
 blinks_states.append(None)
 
@@ -108,6 +110,7 @@ def poller_get_status(url):
                         services[k] += poller_infos['services'][k]
 
                 info("Global status ( %s )" % services)
+                blinks_states[blink_error] = None
 
                 if services['crit'] > 0:
                     blinks_states[blink_unk_alert] = None
@@ -123,10 +126,11 @@ def poller_get_status(url):
                     if blink1:
                         blink1.warning()
                 elif services['unknown'] > 0:
-                    blinks_states[blink_unk_alert] =  1
-                    thread.start_new_thread(blink, (OK_LED, blink_unk_alert))
-                    if blink1 is not None:
-                        blink1.unknown()
+                    if blinks_states[blink_unk_alert] is None:
+                        blinks_states[blink_unk_alert] =  1
+                        thread.start_new_thread(blink, (OK_LED, blink_unk_alert))
+                        if blink1 is not None:
+                            blink1.unknown()
                 elif services['ok'] > 0:
                     blinks_states[blink_unk_alert] = None
                     serial_output.switch_off(Db9.ALL_OUTPUT)
@@ -136,6 +140,11 @@ def poller_get_status(url):
                 else:
                     error("json error")
     	    except:
+                blinks_states[blink_unk_alert] = None
+                if blinks_states[blink_error] is None:
+                    blinks_states[blink_error] = 1
+                    thread.start_new_thread(blink, (WARNING_LED, blink_error))
+
                 error("error while getting status %s " % (sys.exc_info()[0]))
 
         time.sleep(10)
@@ -306,7 +315,11 @@ def main():
         blink1=Blink1Notifier('unknown')
         log("blink(1) found")
     except:
+	import traceback
         warning ("Blink1 error: %s " %  sys.exc_info()[0])
+	print '-'*60
+        traceback.print_exc(file=sys.stdout)
+        print '-'*60
         warning('No Blink(1) code. Look at get-blink1.sh')
         blink1=None
 
