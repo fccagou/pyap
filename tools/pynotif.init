@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# pynotif     Run daemon to notify supervision status.
+#
+# Authors:      fccagou <fccagou@gmail.com>
+#
+# chkconfig: 12345 99 10
+# description: Lights on led depending url status.
+# 
+### BEGIN INIT INFO
+# Default-Start: 12345
+# Default-Stop:  0 6
+# Required-Start: $local_fs
+# Required-Stop: 
+# Short-Description: Lights on led depending url status.
+# Description: Lights on led depending url status.
+# Provides: pynotif
+### END INIT INFO
+
+. /etc/rc.d/init.d/functions
+
+TTY=/dev/ttyUSB0
+URL=
+PRG=/usr/bin/pynotif
+PYNOTIF_OPTS=""
+
+[ -f /etc/sysconfig/pynotif ] && . /etc/sysconfig/pynotif
+
+# See how we were called.
+case "$1" in
+  start)
+	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
+	if [ -n "${PID}" ]
+	then
+		success "pynotif is running"
+		echo
+		exit 0
+	fi
+
+	${PRG} ${PYNOTIF_OPTS} --tty ${TTY} ${URL} 2>&1 > /var/log/pynotif.log &
+	sleep 1
+	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
+	if [ -n "${PID}" ]
+	then
+		success "pynoty started"
+		echo
+	else
+		failure "pynoty started"
+		echo 
+		exit 1
+	fi
+	exit 0
+
+	;;
+  stop)
+	
+	kill $(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')
+	success "pynoty stopped"
+	exit 0
+
+	;;
+  status)
+	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
+	if [ -z "${PID}" ]
+	then
+		echo "pynotif not running"
+	else
+		echo "pynotif running with pid ${PID}"
+	fi
+	exit 0
+	;;
+  *)
+        echo $"Usage: $0 {start|stop|status}"
+        exit 2
+esac
+exit 0
