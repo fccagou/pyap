@@ -89,6 +89,8 @@ Blink(1) led is now usable. see file `blink1-python-update.sh`
 
 ## TODO
 
+- make rh/deb packaging
+- make a choise to manage pyusb/blink1 source code. Use git module ?
 - make tests case
 - add errors management
 - other notification types
