@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 #
 
+from __future__ import print_function
+
 import sys
 import os
 import time
-import thread
+import signal
+from threading import Thread
 import wsgiref.simple_server as server
 from db9 import Db9
 
@@ -42,28 +45,28 @@ blink1=None
 def log(msg):
     global verbose
     if verbose:
-        print "[+] - ",msg
+        print ("[+] - ",msg)
     else:
         pass
 
 def info(msg):
     global verbose
     if verbose:
-        print "[i] - ",msg
+        print ("[i] - ",msg)
     else:
         pass
 
 def warning(msg):
     global verbose
     if verbose:
-        print "[!] - ",msg
+        print ("[!] - ",msg)
     else:
         pass
 
 def error(msg):
     global verbose
     if verbose:
-        print "[-] - ",msg
+        print ("[-] - ",msg)
     else:
         pass
 
@@ -85,25 +88,30 @@ def blink(led, state):
         # serial_output.switch_on(WARNING_LED)
         time.sleep(0.2)
 
+try:
+    # For Python 3.0 and later
+    from urllib.request import urlopen
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import urlopen
 
-import urllib2
 import json
 
 
-def poller_get_status(url):
+def poller_get_status(url,stop):
 
     global serial_output
     global blinks_states
     global blink1
 
-    while 1:
+    while not stop():
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
         if blinks_states[blink_secu_alert] is None:
             try:
                 services = {'crit':0, 'warn':0, 'unknown':0, 'ok':0}
                 for u in url:
                     info ("[+] Get status from %s" % u )
-                    poller_response = urllib2.urlopen(u).read()
+                    poller_response = urlopen(u).read()
                     info("poller status ( %s )" % poller_response.rstrip())
                     poller_infos = json.loads(poller_response)
                     for k in poller_infos['services'].keys():
@@ -128,7 +136,7 @@ def poller_get_status(url):
                 elif services['unknown'] > 0:
                     if blinks_states[blink_unk_alert] is None:
                         blinks_states[blink_unk_alert] =  1
-                        thread.start_new_thread(blink, (OK_LED, blink_unk_alert))
+                        Thread(target=blink, args=(OK_LED, blink_unk_alert)).start()
                         if blink1 is not None:
                             blink1.unknown()
                 elif services['ok'] > 0:
@@ -139,11 +147,11 @@ def poller_get_status(url):
                         blink1.ok()
                 else:
                     error("json error")
-    	    except:
+            except:
                 blinks_states[blink_unk_alert] = None
                 if blinks_states[blink_error] is None:
                     blinks_states[blink_error] = 1
-                    thread.start_new_thread(blink, (WARNING_LED, blink_error))
+                    Thread(target=blink, args=(WARNING_LED, blink_error)).start()
 
                 error("error while getting status %s " % (sys.exc_info()[0]))
 
@@ -206,8 +214,8 @@ def alert_security(start_response):
     global blinks_states
 
     if blinks_states[blink_secu_alert] is None:
-	blinks_states[blink_secu_alert]=1
-        thread.start_new_thread(blink, (CRITICAL_LED, blink_secu_alert))
+        blinks_states[blink_secu_alert]=1
+        Thread(target=blink, args=(CRITICAL_LED, blink_secu_alert)).start()
 
     status = '200 OK'
     output = "security alerte !\n"
@@ -258,7 +266,6 @@ def pynotify_application(environ, start_response):
     return notfound(start_response, environ['PATH_INFO'])
 
 
-
 def main():
 
     global serial_output
@@ -266,6 +273,10 @@ def main():
     global blink1
 
     SERIAL_DEVICE='/dev/ttyUSB0'
+
+    signal.signal(signal.SIGHUP, signal.getsignal(signal.SIGINT))
+    signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
+
 
     try:
         import argparse
@@ -286,6 +297,8 @@ def main():
                         help='Configuration file.')
     parser.add_argument('--tty', default=SERIAL_DEVICE,
                         help="serial device (default=%s)" % SERIAL_DEVICE)
+    parser.add_argument('--server','-s', action='store_true',
+                        help="Run http listening server (default=false)")
     parser.add_argument('--port', '-p', default=LISTENING_PORT, type=int,
                         help='Listening port for status push .')
     parser.add_argument('--verbose', '-v', action='store_true',
@@ -304,22 +317,16 @@ def main():
     verbose = args.verbose
 
 
-    if args.urls:
-        log("Running http poller")
-        thread.start_new_thread(poller_get_status, (args.urls,))
-
-
-
     try:
         from pynotify.blink1_notifier import Blink1Notifier
         blink1=Blink1Notifier('unknown')
         log("blink(1) found")
     except:
-	import traceback
+        import traceback
         warning ("Blink1 error: %s " %  sys.exc_info()[0])
-	print '-'*60
+        print ('-'*60)
         traceback.print_exc(file=sys.stdout)
-        print '-'*60
+        print ('-'*60)
         warning('No Blink(1) code. Look at get-blink1.sh')
         blink1=None
 
@@ -330,20 +337,38 @@ def main():
     serial_output.switch_off(Db9.ALL_OUTPUT)
     serial_output.switch_on(OK_LED)
 
-    port = args.port
+    poller = None
 
-    httpd = server.make_server('', port, pynotify_application)
-
-    log("Serving HTTP on port %i..." % port)
-    # Respond to requests until process is killed
+    stop_thread=False
     try:
-        httpd.serve_forever()
+        if args.server:
+            if args.urls:
+                log("Running http poller")
+                poller = Thread(target=poller_get_status, args=(args.urls,lambda: stop_thread))
+                poller.start()
+
+            port = args.port
+            httpd = server.make_server('', port, pynotify_application)
+            log("Serving HTTP on port %i..." % port)
+            # Respond to requests until process is killed
+            httpd.serve_forever()
+        else:
+            if args.urls:
+                poller_get_status(args.urls, lambda: stop_thread)
+            else:
+                print ("[+] Nothing to poll or to serve... I leave ...")
+    except KeyboardInterrupt:
+        log('End asked by user...bye bye !')
     except:
-        print "Unexpected error:", sys.exc_info()[0]
+        print ("Unexpected error:", sys.exc_info()[0])
 
+    log("Waiting end of process")
+    stop_thread=True
 
-    serial_output.disconnect()
-    blink1.off()
+    if serial_output:
+        serial_output.disconnect()
+    if blink1:
+        blink1.off()
 
 
 if __name__ == '__main__':
