@@ -42,6 +42,8 @@ verbose = False
 blink1=None
 
 
+notifiers=[]
+
 def log(msg):
     global verbose
     if verbose:
@@ -98,7 +100,7 @@ except ImportError:
 import json
 
 
-def poller_get_status(url,stop):
+def poller_get_status(notifiers,url,stop):
 
     global serial_output
     global blinks_states
@@ -122,17 +124,21 @@ def poller_get_status(url,stop):
 
                 if services['crit'] > 0:
                     blinks_states[blink_unk_alert] = None
-                    serial_output.switch_off(Db9.ALL_OUTPUT)
-                    serial_output.switch_on(CRITICAL_LED)
-                    if blink1 is not None:
-                        blink1.critical()
+                    for n in notifiers:
+                        n.critical()
+#                    serial_output.switch_off(Db9.ALL_OUTPUT)
+#                    serial_output.switch_on(CRITICAL_LED)
+#                    if blink1 is not None:
+#                        blink1.critical()
 
                 elif services['warn'] > 0:
                     blinks_states[blink_unk_alert] = None
-                    serial_output.switch_off(Db9.ALL_OUTPUT)
-                    serial_output.switch_on(WARNING_LED)
-                    if blink1:
-                        blink1.warning()
+                    for n in notifiers:
+                        n.warning()
+#                    serial_output.switch_off(Db9.ALL_OUTPUT)
+#                    serial_output.switch_on(WARNING_LED)
+#                    if blink1:
+#                        blink1.warning()
                 elif services['unknown'] > 0:
                     if blinks_states[blink_unk_alert] is None:
                         blinks_states[blink_unk_alert] =  1
@@ -141,10 +147,12 @@ def poller_get_status(url,stop):
                             blink1.unknown()
                 elif services['ok'] > 0:
                     blinks_states[blink_unk_alert] = None
-                    serial_output.switch_off(Db9.ALL_OUTPUT)
-                    serial_output.switch_on(OK_LED)
-                    if blink1 is not None:
-                        blink1.ok()
+                    for n in notifiers:
+                        n.ok()
+#                    serial_output.switch_off(Db9.ALL_OUTPUT)
+#                    serial_output.switch_on(OK_LED)
+#                    if blink1 is not None:
+#                        blink1.ok()
                 else:
                     error("json error")
             except:
@@ -271,6 +279,8 @@ def main():
     global serial_output
     global verbose
     global blink1
+    global notifiers
+
 
     SERIAL_DEVICE='/dev/ttyUSB0'
 
@@ -319,8 +329,9 @@ def main():
 
     try:
         from pynotify.blink1_notifier import Blink1Notifier
-        blink1=Blink1Notifier('unknown')
+        blink1=Blink1Notifier(state='unknown')
         log("blink(1) found")
+        notifiers.append(blink1)
     except:
         import traceback
         warning ("Blink1 error: %s " %  sys.exc_info()[0])
@@ -331,11 +342,18 @@ def main():
         blink1=None
 
 
-
-    serial_output = Db9(tty)
-    serial_output.connect()
-    serial_output.switch_off(Db9.ALL_OUTPUT)
-    serial_output.switch_on(OK_LED)
+    try:
+        from pynotify.serial_led_notifier import SerialLedNotifier
+        serial_led=SerialLedNotifier(tty,state='ok')
+        log("serial_led found")
+        notifiers.append(serial_led)
+    except:
+        import traceback
+        warning ("SerialLed error: %s " %  sys.exc_info()[0])
+        print ('-'*60)
+        traceback.print_exc(file=sys.stdout)
+        print ('-'*60)
+        serial_led=None
 
     poller = None
 
@@ -344,7 +362,7 @@ def main():
         if args.server:
             if args.urls:
                 log("Running http poller")
-                poller = Thread(target=poller_get_status, args=(args.urls,lambda: stop_thread))
+                poller = Thread(target=poller_get_status, args=(notifiers, args.urls,lambda: stop_thread))
                 poller.start()
 
             port = args.port
@@ -354,7 +372,7 @@ def main():
             httpd.serve_forever()
         else:
             if args.urls:
-                poller_get_status(args.urls, lambda: stop_thread)
+                poller_get_status(notifiers, args.urls, lambda: stop_thread)
             else:
                 print ("[+] Nothing to poll or to serve... I leave ...")
     except KeyboardInterrupt:
