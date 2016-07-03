@@ -1,5 +1,5 @@
 import time
-from notifier import Notifier
+from pynotify.notifier import Notifier
 from blink1.blink1 import Blink1
 
 
