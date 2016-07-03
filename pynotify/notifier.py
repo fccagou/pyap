@@ -14,8 +14,7 @@ class Notifier (object):
         prev_state=self.state
         try:
             getattr(self,state)()
-        except:
-            self.state=prev_state
+        except AttributeError:
             raise NotImplementedError("Unknown state '%s' " % state)
 
 
