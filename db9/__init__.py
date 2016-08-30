@@ -43,7 +43,8 @@ class Db9(object):
         return ((struct.unpack('l',self.__state)[0] & pin) == pin)
 
     def disconnect(self):
-        self.__fd.close()
+        if self.__fd is not None:
+            self.__fd.close()
 
     def write(self, datas):
         self.__fd.write(datas)
