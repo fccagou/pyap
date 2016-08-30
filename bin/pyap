@@ -297,7 +297,7 @@ def main():
     except ImportError:
         import optparse
         parser = optparse.OptionParser(
-            description='Notify processor.')
+            description='PYthon Alert Processor.')
         parser.parse_args_orig = parser.parse_args
         parser.parse_args = lambda: parser.parse_args_orig()[0]
         parser.add_argument = parser.add_option
@@ -313,6 +313,8 @@ def main():
                         help='Listening port for status push .')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Verbose.')
+    parser.add_argument('--debug', '-d', action='store_true',
+                        help='Debug mode.')
     parser.add_argument('urls', nargs='*',
                         help='url for http state poller')
 
@@ -325,21 +327,24 @@ def main():
 
     tty = args.tty
     verbose = args.verbose
+    debug = args.debug
 
 
     try:
         from pyap.blink1_notifier import Blink1Notifier
         blink1=Blink1Notifier(state='unknown')
-        log("blink(1) found")
+        log("Blink(1) found")
         notifiers.append(blink1)
     except:
-        import traceback
-        warning ("Blink1 error: %s " %  sys.exc_info()[0])
-        print ('-'*60)
-        traceback.print_exc(file=sys.stdout)
-        print ('-'*60)
-        warning('No Blink(1) code. Look at get-blink1.sh')
+        warning ("Blink(1) not found")
         blink1=None
+        if debug:
+            import traceback
+            warning ("Blink1 error: %s " %  sys.exc_info()[0])
+            print ('-'*60)
+            traceback.print_exc(file=sys.stdout)
+            print ('-'*60)
+            warning('No Blink(1) code. Look at get-blink1.sh')
 
 
     try:
@@ -348,12 +353,14 @@ def main():
         log("serial_led found")
         notifiers.append(serial_led)
     except:
-        import traceback
-        warning ("SerialLed error: %s " %  sys.exc_info()[0])
-        print ('-'*60)
-        traceback.print_exc(file=sys.stdout)
-        print ('-'*60)
+        warning("serial_led not found")
         serial_led=None
+        if debug:
+            import traceback
+            warning ("SerialLed error: %s " %  sys.exc_info()[0])
+            print ('-'*60)
+            traceback.print_exc(file=sys.stdout)
+            print ('-'*60)
 
     poller = None
 
