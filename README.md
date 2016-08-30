@@ -1,6 +1,9 @@
-# pynotif
+# pyap (PYthon Alert Processor  / P....n Y'A Personne)
 
-Notification using python
+Pyap is a little tools used to process alert sent by differents ways.
+
+_Previously named pynotif, I need to rename it because of conflicted
+naming with python-notify from libnotify._
 
 ## History
 
@@ -26,7 +29,7 @@ I create the first python class [Db9](#Serial Db9)
 Inspired by a linuxfocus article on [sled](http://linuxfocus.org/English/January2001/article186.shtml)
 the Db9 class use ioctl to switch on/off the output pins.
 
-The file [pynotifserial](tests/pynotifserial) is an example.
+The file [pyap-serial](tests/pyap-serial) is an example.
 
 
 The tests are made on this hardware
@@ -42,18 +45,18 @@ The tests are made on this hardware
 
 
 
-Just test using `python tests/pynotifserial <tty>`
+Just test using `python tests/pyap-serial <tty>`
 
-## pynotif
+## pyap
 
 Because serial port must be opened to keep the light on, I had to create a
 program that controls the lights and receives change orders.
 
-[Pynotif](pynotif) is a server listening for http requests to switch leds on/off.
+[Pyap](pyap) is a server listening for http requests to switch leds on/off.
 
 Run the server:
 ```
-$ python ./pynotif /dev/ttyXXX [nagios_url_status]
+$ python ./pyap /dev/ttyXXX [nagios_url_status]
 [+] - Running nagios poller
 [+] - Serving HTTP on port 8080...
 ```
@@ -73,10 +76,10 @@ curl http://127.0.0.1:8080/alert/security/ack
 
 ## nagios poller
 
-Actually `nagios_poller` is a thread in `pynotif` as a test code. It must be coded
-in it own program. Pynotif must not do polling AND sending alerts.
+Actually `nagios_poller` is a thread in `pyap` as a test code. It must be coded
+in it own program. Pyap must not do polling AND sending alerts.
 
-If the optional pynotif param (`nagios_url_status`) is set, a thread is started to
+If the optional pyap param (`nagios_url_status`) is set, a thread is started to
 poll informations from the url nagios_url_status. Request must returns json values
 of nagios services status in the form :
 ```
@@ -112,7 +115,7 @@ Blink(1) led is now usable. see file `blink1-python-update.sh`
                                    V        V
  <----- (poller 1) ----------->  +-----------+ --------> notif type 1 <
  <-----     .                    |           |                .
- <-----     .              --->  |  pynotif  | ---->          .
+ <-----     .              --->  |  pyap  | ---->          .
  <-----     .                    |           |                .
  <----- (poller x) ----------->  +-----------+ --------> notif type n <
 

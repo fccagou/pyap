@@ -1,5 +1,5 @@
 import time
-from pynotify.notifier import Notifier
+from pyap.notifier import Notifier
 from db9 import Db9
 
 

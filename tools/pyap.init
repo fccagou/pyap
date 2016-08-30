@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# pynotif     Run daemon to notify supervision status.
+# pyap     Run daemon to notify supervision status.
 #
 # Authors:      fccagou <fccagou@gmail.com>
 #
@@ -14,17 +14,17 @@
 # Required-Stop: 
 # Short-Description: Lights on led depending url status.
 # Description: Lights on led depending url status.
-# Provides: pynotif
+# Provides: pyap
 ### END INIT INFO
 
 . /etc/rc.d/init.d/functions
 
 TTY=/dev/ttyUSB0
 URL=
-PRG=/usr/bin/pynotif
+PRG=/usr/bin/pyap
 PYNOTIF_OPTS=""
 
-[ -f /etc/sysconfig/pynotif ] && . /etc/sysconfig/pynotif
+[ -f /etc/sysconfig/pyap ] && . /etc/sysconfig/pyap
 
 # See how we were called.
 case "$1" in
@@ -32,12 +32,12 @@ case "$1" in
 	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
 	if [ -n "${PID}" ]
 	then
-		success "pynotif is running"
+		success "pyap is running"
 		echo
 		exit 0
 	fi
 
-	${PRG} ${PYNOTIF_OPTS} --tty ${TTY} ${URL} 2>&1 > /var/log/pynotif.log &
+	${PRG} ${PYNOTIF_OPTS} --tty ${TTY} ${URL} 2>&1 > /var/log/pyap.log &
 	sleep 1
 	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
 	if [ -n "${PID}" ]
@@ -63,9 +63,9 @@ case "$1" in
 	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
 	if [ -z "${PID}" ]
 	then
-		echo "pynotif not running"
+		echo "pyap not running"
 	else
-		echo "pynotif running with pid ${PID}"
+		echo "pyap running with pid ${PID}"
 	fi
 	exit 0
 	;;
