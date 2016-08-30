@@ -1,0 +1,13 @@
+# Config file used by init/systemd script.
+#
+# Binary launch
+# PRG=/usr/bin/pyap
+#
+# TTY for serial leds
+# TTY=/dev/ttyUSB0
+#
+# URL used to poll status
+# URL=http://nagiosserver/nagios2json.php
+# URL="file:///usr/share/doc/pyap/samples/status/n1 file:///usr/share/doc/pyap/samples/status/n2"
+# Others pyap options (see pyap --help)
+# PYAP_OPTS=""

@@ -22,10 +22,10 @@ VERSION=$(grep 'version=' setup-${DISTRIB}.py | sed "s#.* version='## ; s#'.*##"
 
 case ${DISTRIB} in
 	el6)
-		requires=""
+		requires="--requires=libusb1"
 		;;
 	el7)
-		requires="--requires=pyusb"
+		requires="--requires=pyusb,libusb"
 esac
 
 python setup-${DISTRIB}.py -v bdist_rpm --release=$RELEASE --distribution-name=$DISTRIB --obsoletes=pyap ${requires}

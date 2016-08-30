@@ -6,12 +6,12 @@
 #
 # chkconfig: 12345 99 10
 # description: Lights on led depending url status.
-# 
+#
 ### BEGIN INIT INFO
 # Default-Start: 12345
 # Default-Stop:  0 6
 # Required-Start: $local_fs
-# Required-Stop: 
+# Required-Stop:
 # Short-Description: Lights on led depending url status.
 # Description: Lights on led depending url status.
 # Provides: pyap
@@ -22,7 +22,7 @@
 TTY=/dev/ttyUSB0
 URL=
 PRG=/usr/bin/pyap
-PYNOTIF_OPTS=""
+PYAP_OPTS=""
 
 [ -f /etc/sysconfig/pyap ] && . /etc/sysconfig/pyap
 
@@ -37,25 +37,25 @@ case "$1" in
 		exit 0
 	fi
 
-	${PRG} ${PYNOTIF_OPTS} --tty ${TTY} ${URL} 2>&1 > /var/log/pyap.log &
+	${PRG} ${PYAP_OPTS} --tty ${TTY} ${URL} 2>&1 > /var/log/pyap.log &
 	sleep 1
 	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
 	if [ -n "${PID}" ]
 	then
-		success "pynoty started"
+		success "pyap started"
 		echo
 	else
-		failure "pynoty started"
-		echo 
+		failure "pyap started"
+		echo
 		exit 1
 	fi
 	exit 0
 
 	;;
   stop)
-	
+
 	kill $(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')
-	success "pynoty stopped"
+	success "pyap stopped"
 	exit 0
 
 	;;
