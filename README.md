@@ -56,7 +56,7 @@ program that controls the lights and receives change orders.
 
 Run the server:
 ```
-$ python ./pyap /dev/ttyXXX [nagios_url_status]
+$ (export PYTHONPATH=$(pwd):${PYTHONPATH}; python bin/pyap -v --tty /dev/ttyXXX file://$(pwd)/tests/status/n1 file://$(pwd)/tests/status/n2 )
 [+] - Running nagios poller
 [+] - Serving HTTP on port 8080...
 ```
@@ -92,12 +92,10 @@ Blink(1) led is now usable. see file `blink1-python-update.sh`
 
 ## TODO
 
-- make rh/deb packaging
+- make deb packaging
 - make a choise to manage pyusb/blink1 source code. Use git module ?
 - make tests case
-- add errors management
 - other notification types
-- add notifier type.
 - incoming `pollers` for various sources
 
   - alerte with dif levels: nagios, shinken ...
