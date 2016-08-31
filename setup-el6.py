@@ -25,19 +25,23 @@ setup(name='pyap',
         author_email='fccagou@gmail.com',
         license='GPLv3+',
         long_description="PYthon Alert Processor (or P..... Y'A Personne) is a little tool used to process alert sent by differents ways.",
-        install_requires=[],
         scripts=[
             'bin/pyap'
             ],
-        doc_files=[
-            'README.md'
-        ],
         packages=[
             'pyap',
             'blink1',
             'usb',
             'db9'
             ],
+        package_data= {
+            'usb': [
+                'backend/__init__.py',
+                'backend/libusb0.py',
+                'backend/libusb1.py',
+                'backend/openusb.py',
+                ] 
+            }, 
         data_files=[
             ('share/doc/pyap',[
                 'doc/README.md',
