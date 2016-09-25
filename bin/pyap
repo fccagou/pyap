@@ -75,21 +75,22 @@ def error(msg):
 
 
 
-def blink(led, state):
+def blink(led, state, stop):
 
     global serial_output
     global blinks_states
+    global notifiers
 
-    serial_output.switch_off(Db9.ALL_OUTPUT)
+    for n in notifiers:
+        n.off()
 
-    while blinks_states[state] is not None:
-
-        serial_output.switch_on(led)
-        # serial_output.switch_off(WARNING_LED)
-        time.sleep(0.2)
-        serial_output.switch_off(led)
-        # serial_output.switch_on(WARNING_LED)
-        time.sleep(0.2)
+    while blinks_states[state] is not None and not stop():
+        for n in notifiers:
+            n.warning()
+        time.sleep(0.4)
+        for n in notifiers:
+            n.off()
+        time.sleep(0.4)
 
 try:
     # For Python 3.0 and later
@@ -136,7 +137,7 @@ def poller_get_status(notifiers,url,stop):
                 elif services['unknown'] > 0:
                     if blinks_states[blink_unk_alert] is None:
                         blinks_states[blink_unk_alert] =  1
-                        Thread(target=blink, args=(OK_LED, blink_unk_alert)).start()
+                        Thread(target=blink, args=(OK_LED, blink_unk_alert, stop)).start()
                         if blink1 is not None:
                             blink1.unknown()
                 elif services['ok'] > 0:
@@ -149,7 +150,7 @@ def poller_get_status(notifiers,url,stop):
                 blinks_states[blink_unk_alert] = None
                 if blinks_states[blink_error] is None:
                     blinks_states[blink_error] = 1
-                    Thread(target=blink, args=(WARNING_LED, blink_error)).start()
+                    Thread(target=blink, args=(WARNING_LED, blink_error,stop)).start()
 
                 error("error while getting status %s " % (sys.exc_info()[0]))
 
@@ -423,6 +424,9 @@ def main():
 
     log("Waiting end of process")
     stop_thread=True
+
+    for i in range(0,len(blinks_states)-1):
+        blinks_states[i] = None
 
     for n in notifiers:
         n.off()
