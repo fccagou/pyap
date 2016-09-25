@@ -41,7 +41,8 @@ verbose = False
 
 blink1=None
 
-
+NOTIFIERS = {}
+URLS = {} 
 notifiers=[]
 
 def log(msg):
@@ -269,6 +270,8 @@ def main():
     global verbose
     global blink1
     global notifiers
+    global NOTIFIERS
+    global URLS
 
     signal.signal(signal.SIGHUP, signal.getsignal(signal.SIGINT))
     signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
@@ -291,8 +294,8 @@ def main():
 
     parser.add_argument('--conf', '-c',
                         help='Configuration file.')
-    parser.add_argument('--tty', default=None,
-                        help="serial device (default=None)")
+    parser.add_argument('--notifiers', '-n',
+                        help='Notifiers list in Blink1Notifier,SerialLedNotifier')
     parser.add_argument('--server','-s', action='store_true',
                         help="Run http listening server (default=false)")
     parser.add_argument('--port', '-p', default=LISTENING_PORT, type=int,
@@ -308,53 +311,99 @@ def main():
 
     args = parser.parse_args()
 
-    if args.conf:
-        execfile(args.conf)
-
     verbose = args.verbose
     debug = args.debug
 
-    try:
-        from pyap.blink1_notifier import Blink1Notifier
-        blink1=Blink1Notifier(state='unknown')
-        log("Blink(1) found")
-        notifiers.append(blink1)
-    except:
-        warning ("Blink(1) not found")
-        blink1=None
-        if debug:
-            import traceback
-            warning ("Blink1 error: %s " %  sys.exc_info()[0])
-            print ('-'*60)
-            traceback.print_exc(file=sys.stdout)
-            print ('-'*60)
-            warning('No Blink(1) code. Look at get-blink1.sh')
+    if debug:
+        log ("args list: %s " %  args)
+
+    if args.conf is not None:
+        log('Using config file %s' % args.conf)
+        conf = json.loads(open(args.conf, 'r').read())
+        NOTIFIERS = conf['NOTIFIERS']
+        URLS = conf['URLS']
+
+    if debug:
+        log ("NOTIFIERS: %s" % NOTIFIERS)
+        log ("URLS: %s" % URLS)
+
+    if args.notifiers:
+        for n in args.notifiers.split(','):
+            if n == 'Blink1Notifier':
+                NOTIFIERS[n] = {}
+                NOTIFIERS[n]['type'] = n
+                NOTIFIERS[n]['led'] = 0
+                NOTIFIERS[n]['default_status'] = 'unknown'
+                NOTIFIERS[n]['status'] = {}
+                NOTIFIERS[n]['status']['ok'] = '#00FF00'
+                NOTIFIERS[n]['status']['warn'] = '#FFFF00'
+                NOTIFIERS[n]['status']['crit'] = '#FF0000'
+    
+    if not len(NOTIFIERS):
+        error('No notifier found !    C U Later !!')
+        sys.exit(1)
+
+    for u in URLS:
+        args.urls.append(URLS[u]['url'])
+
+    for n in NOTIFIERS:
+        n_type = NOTIFIERS[n]['type']
+
+        if n_type == 'Blink1Notifier':
+            try:
+                from pyap.blink1_notifier import Blink1Notifier
+                blink1=Blink1Notifier(
+                        led = NOTIFIERS[n]['led'],
+                        state = NOTIFIERS[n]['default_status'],
+                        ok_color = NOTIFIERS[n]['status']['ok'],
+                        warn_color = NOTIFIERS[n]['status']['warn'],
+                        crit_color = NOTIFIERS[n]['status']['crit'],
+                        )
+                log("Blink(1) found")
+                notifiers.append(blink1)
+            except:
+                warning ("Blink(1) not found")
+                blink1=None
+                if debug:
+                    import traceback
+                    warning ("Blink1 error: %s " %  sys.exc_info()[0])
+                    print ('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print ('-'*60)
+                    warning('No Blink(1) code. Look at get-blink1.sh')
 
 
-    if args.tty is not None:
-        try:
-            from pyap.serial_led_notifier import SerialLedNotifier
-            serial_led=SerialLedNotifier(args.tty,state='ok')
-            log("serial_led found")
-            notifiers.append(serial_led)
-        except:
-            warning("serial_led not found")
-            serial_led=None
-            if debug:
-                import traceback
-                warning ("SerialLed error: %s " %  sys.exc_info()[0])
-                print ('-'*60)
-                traceback.print_exc(file=sys.stdout)
-                print ('-'*60)
+        elif n_type == 'SerialLedNotifier':
+            
+            try:
+                from pyap.serial_led_notifier import SerialLedNotifier
+                serial_led=SerialLedNotifier(
+                        NOTIFIERS[n]['tty'],
+                        state=NOTIFIERS[n]['default_status'],
+                        )
+                log("serial_led found")
+                notifiers.append(serial_led)
+            except:
+                warning("serial_led not found")
+                serial_led=None
+                if debug:
+                    import traceback
+                    warning ("SerialLed error: %s " %  sys.exc_info()[0])
+                    print ('-'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print ('-'*60)
 
     poller = None
 
     stop_thread=False
     try:
         if args.server:
-            if args.urls:
+            if len(args.urls):
                 log("Running http poller")
-                poller = Thread(target=poller_get_status, args=(notifiers, args.urls,lambda: stop_thread))
+                poller = Thread(
+                        target=poller_get_status,
+                        args=(notifiers, args.urls,lambda: stop_thread)
+                        )
                 poller.start()
 
             port = args.port
@@ -363,7 +412,7 @@ def main():
             # Respond to requests until process is killed
             httpd.serve_forever()
         else:
-            if args.urls:
+            if len(args.urls):
                 poller_get_status(notifiers, args.urls, lambda: stop_thread)
             else:
                 print ("[+] Nothing to poll or to serve... I leave ...")
@@ -375,11 +424,8 @@ def main():
     log("Waiting end of process")
     stop_thread=True
 
-    if serial_output:
-        serial_output.disconnect()
-    if blink1:
-        blink1.off()
-
+    for n in notifiers:
+        n.off()
 
 if __name__ == '__main__':
     main ()

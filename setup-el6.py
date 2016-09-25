@@ -48,7 +48,8 @@ setup(name='pyap',
                 'doc/LICENSE.md',
                 'doc/LICENSE-EXTERNAL.md',
                 'data/nagios2json.php',
-                'data/pyap.conf'
+                'data/pyap.sysconfig'
+                'tests/tests.conf'
                 ]
             ),
             ('share/doc/pyap/samples/status',[

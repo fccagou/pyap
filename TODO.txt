@@ -2,11 +2,16 @@
 TODO LIST
 *********
 
+- in bin/pyap, associate an url with notifieris to specify which notifier 
+  to use for an url.
 
 - have a thread to manage led states doing on/off
 - Use msgQ or something else to send new states to led state manager
 
-
   pollers   ----> event(level) ------>  led's state manager
 
+
+DONE
+====
+- add conf file using json to set notifiers and urls.
 - add better logging.
