@@ -23,9 +23,9 @@ URL=
 PRG=/usr/bin/pyap
 PYAP_OPTS=""
 
-[ -n "${TTY}" ] && PYAP_OPTS="${PYAP_OPTS} --tty ${TTY}"
-
 [ -f /etc/sysconfig/pyap ] && . /etc/sysconfig/pyap
+
+[ -n "${TTY}" ] && PYAP_OPTS="${PYAP_OPTS} --tty ${TTY}"
 
 # See how we were called.
 case "$1" in
