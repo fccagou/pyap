@@ -42,13 +42,13 @@ setup(name='pyap',
                 'doc/README.md',
                 'doc/LICENSE.md',
                 'doc/LICENSE-EXTERNAL.md',
-                'data/nagios2json.php'
+                'data/nagios2json.php',
+                'data/pyap.conf'
                 ]),
             ('share/doc/pyap/samples/status',[
                 'tests/status/n1',
                 'tests/status/n2',
                 ]
             ),
-            ('/etc/sysconfig',['data/etc/sysconfig/pyap']),
             ],
     )
