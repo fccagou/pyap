@@ -11,7 +11,14 @@ def blink_set_state(blink1,fade_millis,rgbstr,ledn=0):
 class Blink1Notifier (Notifier):
     """Abstract class to implement notifier"""
 
-    def __init__(self, state='unknown', alert_level=0,blinking=False):
+    def __init__(self, state='unknown', alert_level=0,blinking=False,
+           led = 0,
+           crit_color = '#FF0000',
+           warn_color = '#FF5500',
+           ok_color = '#00FF00',
+           unknown_color = '#999999'
+            ):
+
         super(Blink1Notifier,self).__init__(state,alert_level,blinking)
         self.blink1=Blink1()
         if( self.blink1.dev == None ):
@@ -19,12 +26,17 @@ class Blink1Notifier (Notifier):
 
         self.fade_millis=300
         self.previous_state=None
+        self.led = led
+
+        self.crit_color = crit_color
+        self.warn_color = warn_color
+        self.ok_color = ok_color
+        self.unknown_color = unknown_color
         self.set_state(self.state)
 
     def unknown(self):
         self.state='unknown'
-        blink_set_state(self.blink1, self.fade_millis, '#770000',1)
-        blink_set_state(self.blink1, self.fade_millis, '#007700',2)
+        blink_set_state(self.blink1, self.fade_millis, self.unknown_color,self.led)
 
     def off(self):
         self.state='off'
@@ -32,15 +44,15 @@ class Blink1Notifier (Notifier):
 
     def ok(self):
         self.state='ok'
-        blink_set_state(self.blink1, self.fade_millis, '#00FF00')
+        blink_set_state(self.blink1, self.fade_millis, self.ok_color, self.led)
 
     def warning(self):
         self.state='warning'
-        blink_set_state(self.blink1, self.fade_millis, '#FF5500')
+        blink_set_state(self.blink1, self.fade_millis, self.warn_color, self.led)
 
     def critical(self):
         self.state='critical'
-        blink_set_state(self.blink1, self.fade_millis, '#FF0000')
+        blink_set_state(self.blink1, self.fade_millis, self.crit_color, self.led)
 
     def alert(self, level=0):
         for i in range(0,30):
@@ -50,15 +62,6 @@ class Blink1Notifier (Notifier):
             blink_set_state(self.blink1, self.fade_millis, '#0000FF',1)
             blink_set_state(self.blink1, self.fade_millis, '#FF0000',2)
             time.sleep( 0.25 )
-        #
-        #while [ 1 ] ; do
-        #  blink1-tool -l 2 --red
-        #  blink1-tool -l 1 --blue
-        #  sleep 0.5
-        #  blink1-tool -l 1 --red
-        #  blink1-tool -l 2 --blue
-        #  sleep 0.5
-        #done
 
     def blink(self):
         raise NotImplementedError("Abstract")
