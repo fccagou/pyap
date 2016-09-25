@@ -52,13 +52,25 @@ Just test using `python tests/pyap-serial <tty>`
 Because serial port must be opened to keep the light on, I had to create a
 program that controls the lights and receives change orders.
 
-[Pyap](pyap) is a server listening for http requests to switch leds on/off.
+[Pyap](pyap) is a server listening for http requests and poll remote status
+through http requests to switch leds on/off.
 
-Run the server:
+Replace __PWD__ in tests/tests.conf according to your path and run the server:
+
 ```
-$ (export PYTHONPATH=$(pwd):${PYTHONPATH}; python bin/pyap -v --tty /dev/ttyXXX file://$(pwd)/tests/status/n1 file://$(pwd)/tests/status/n2 )
-[+] - Running nagios poller
-[+] - Serving HTTP on port 8080...
+$ export PYTHONPATH=$(pwd); bin/pyap -v --server --conf=tests/test.conf 
+[+] -  Using config file tests/test.conf
+[+] -  Blink(1) found
+[!] -  serial_led not found
+[+] -  Running http poller
+[i] -  [+] Get status from file:///home/pi/src/pyap/tests/status/n1
+[+] -  Serving HTTP on port 8080...
+[i] -  poller status ( {"services":{ "ok":1, "warn":0, "crit":0, "unknown":0}} )
+[i] -  [+] Get status from file:///home/pi/src/pyap/tests/status/n2
+[i] -  poller status ( {"services":{ "ok":0, "warn":0, "crit":0, "unknown":0}} )
+[i] -  Global status ( {'crit': 0, 'warn': 0, 'ok': 1, 'unknown': 0} )
+^C[+] -  End asked by user...bye bye !
+[+] -  Waiting end of process
 ```
 
 Test the commands:
@@ -74,17 +86,22 @@ curl http://127.0.0.1:8080/alert/security/ack
 ```
 
 
-## nagios poller
+## http poller
 
-Actually `nagios_poller` is a thread in `pyap` as a test code. It must be coded
+Actually `http poller` is a thread in `pyap` as a test code. It must be coded
 in it own program. Pyap must not do polling AND sending alerts.
 
-If the optional pyap param (`nagios_url_status`) is set, a thread is started to
-poll informations from the url nagios_url_status. Request must returns json values
-of nagios services status in the form :
+If urls are provided in conf file or in parameters, a thread is started to
+poll informations from all the url. Request must returns json
+values of services status in the form :
 ```
 {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
 ```
+
+## Nagios/Shinken http poller
+
+The `data/nagios2json.php` file can be used on nagios/shinken server as a http
+poller. The php code uses [mklivestatus](http://mathias-kettner.de/checkmk_livestatus.html).
 
 ## blink(1)
 
@@ -113,7 +130,7 @@ Blink(1) led is now usable. see file `blink1-python-update.sh`
                                    V        V
  <----- (poller 1) ----------->  +-----------+ --------> notif type 1 <
  <-----     .                    |           |                .
- <-----     .              --->  |  pyap  | ---->          .
+ <-----     .              --->  |    pyap   | ---->          .
  <-----     .                    |           |                .
  <----- (poller x) ----------->  +-----------+ --------> notif type n <
 
