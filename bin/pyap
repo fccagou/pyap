@@ -126,19 +126,12 @@ def poller_get_status(notifiers,url,stop):
                     blinks_states[blink_unk_alert] = None
                     for n in notifiers:
                         n.critical()
-#                    serial_output.switch_off(Db9.ALL_OUTPUT)
-#                    serial_output.switch_on(CRITICAL_LED)
-#                    if blink1 is not None:
-#                        blink1.critical()
 
                 elif services['warn'] > 0:
                     blinks_states[blink_unk_alert] = None
                     for n in notifiers:
                         n.warning()
-#                    serial_output.switch_off(Db9.ALL_OUTPUT)
-#                    serial_output.switch_on(WARNING_LED)
-#                    if blink1:
-#                        blink1.warning()
+
                 elif services['unknown'] > 0:
                     if blinks_states[blink_unk_alert] is None:
                         blinks_states[blink_unk_alert] =  1
@@ -149,10 +142,6 @@ def poller_get_status(notifiers,url,stop):
                     blinks_states[blink_unk_alert] = None
                     for n in notifiers:
                         n.ok()
-#                    serial_output.switch_off(Db9.ALL_OUTPUT)
-#                    serial_output.switch_on(OK_LED)
-#                    if blink1 is not None:
-#                        blink1.ok()
                 else:
                     error("json error")
             except:
@@ -281,9 +270,6 @@ def main():
     global blink1
     global notifiers
 
-
-    SERIAL_DEVICE='/dev/ttyUSB0'
-
     signal.signal(signal.SIGHUP, signal.getsignal(signal.SIGINT))
     signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
 
@@ -305,8 +291,8 @@ def main():
 
     parser.add_argument('--conf', '-c',
                         help='Configuration file.')
-    parser.add_argument('--tty', default=SERIAL_DEVICE,
-                        help="serial device (default=%s)" % SERIAL_DEVICE)
+    parser.add_argument('--tty', default=None,
+                        help="serial device (default=None)")
     parser.add_argument('--server','-s', action='store_true',
                         help="Run http listening server (default=false)")
     parser.add_argument('--port', '-p', default=LISTENING_PORT, type=int,
@@ -325,10 +311,8 @@ def main():
     if args.conf:
         execfile(args.conf)
 
-    tty = args.tty
     verbose = args.verbose
     debug = args.debug
-
 
     try:
         from pyap.blink1_notifier import Blink1Notifier
@@ -347,20 +331,21 @@ def main():
             warning('No Blink(1) code. Look at get-blink1.sh')
 
 
-    try:
-        from pyap.serial_led_notifier import SerialLedNotifier
-        serial_led=SerialLedNotifier(tty,state='ok')
-        log("serial_led found")
-        notifiers.append(serial_led)
-    except:
-        warning("serial_led not found")
-        serial_led=None
-        if debug:
-            import traceback
-            warning ("SerialLed error: %s " %  sys.exc_info()[0])
-            print ('-'*60)
-            traceback.print_exc(file=sys.stdout)
-            print ('-'*60)
+    if args.tty is not None:
+        try:
+            from pyap.serial_led_notifier import SerialLedNotifier
+            serial_led=SerialLedNotifier(args.tty,state='ok')
+            log("serial_led found")
+            notifiers.append(serial_led)
+        except:
+            warning("serial_led not found")
+            serial_led=None
+            if debug:
+                import traceback
+                warning ("SerialLed error: %s " %  sys.exc_info()[0])
+                print ('-'*60)
+                traceback.print_exc(file=sys.stdout)
+                print ('-'*60)
 
     poller = None
 

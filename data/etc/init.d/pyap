@@ -19,10 +19,11 @@
 
 . /etc/rc.d/init.d/functions
 
-TTY=/dev/ttyUSB0
 URL=
 PRG=/usr/bin/pyap
 PYAP_OPTS=""
+
+[ -n "${TTY}" ] && PYAP_OPTS="${PYAP_OPTS} --tty ${TTY}"
 
 [ -f /etc/sysconfig/pyap ] && . /etc/sysconfig/pyap
 
@@ -37,7 +38,7 @@ case "$1" in
 		exit 0
 	fi
 
-	${PRG} ${PYAP_OPTS} --tty ${TTY} ${URL} 2>&1 > /var/log/pyap.log &
+	${PRG} ${PYAP_OPTS} ${URL} 2>&1 > /var/log/pyap.log &
 	sleep 1
 	PID="$(ps aux | grep ${PRG} | grep -v grep  | awk '{ print $2 }')"
 	if [ -n "${PID}" ]
