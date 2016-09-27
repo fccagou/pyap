@@ -58,7 +58,7 @@ through http requests to switch leds on/off.
 Replace __PWD__ in tests/tests.conf according to your path and run the server:
 
 ```
-$ export PYTHONPATH=$(pwd); bin/pyap -v --server --conf=tests/test.conf 
+$ export PYTHONPATH=$(pwd); bin/pyap -v --server --conf=tests/test.conf
 [+] -  Using config file tests/test.conf
 [+] -  Blink(1) found
 [!] -  serial_led not found
@@ -109,30 +109,5 @@ Blink(1) led is now usable. see file `blink1-python-update.sh`
 
 ## TODO
 
-- make deb packaging
-- make a choise to manage pyusb/blink1 source code. Use git module ?
-- make tests case
-- other notification types
-- incoming `pollers` for various sources
+[See](https://github.com/fccagou/pyap/blob/master/TODO.txt)
 
-  - alerte with dif levels: nagios, shinken ...
-  - incomming mail: thunderbid, mutt, fetchmail,  ...
-
-
-
-```
-
-
-                               (client1) (clientx)
-                                   |        |
-                                   |        |
-                                   |        |
-                                   V        V
- <----- (poller 1) ----------->  +-----------+ --------> notif type 1 <
- <-----     .                    |           |                .
- <-----     .              --->  |    pyap   | ---->          .
- <-----     .                    |           |                .
- <----- (poller x) ----------->  +-----------+ --------> notif type n <
-
-
-```
