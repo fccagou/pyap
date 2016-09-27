@@ -109,5 +109,5 @@ Blink(1) led is now usable. see file `blink1-python-update.sh`
 
 ## TODO
 
-[See](https://github.com/fccagou/pyap/blob/master/TODO.txt)
+See [TODO.md](https://github.com/fccagou/pyap/blob/master/TODO.md)
 
