@@ -40,15 +40,16 @@ setup(name='pyap',
                 'backend/libusb0.py',
                 'backend/libusb1.py',
                 'backend/openusb.py',
-                ] 
-            }, 
+                ]
+            },
         data_files=[
             ('share/doc/pyap',[
                 'doc/README.md',
                 'doc/LICENSE.md',
                 'doc/LICENSE-EXTERNAL.md',
                 'data/nagios2json.php',
-                'data/pyap.sysconfig'
+                'data/pyap.sysconfig',
+                'data/51-blink1.rules',
                 'tests/tests.conf'
                 ]
             ),

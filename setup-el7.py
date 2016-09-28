@@ -44,6 +44,7 @@ setup(name='pyap',
                 'doc/LICENSE-EXTERNAL.md',
                 'data/nagios2json.php',
                 'data/pyap.sysconfig',
+                'data/51-blink1.rules',
                 'tests/tests.conf'
                 ]),
             ('share/doc/pyap/samples/status',[
