@@ -45,7 +45,7 @@ setup(name='pyap',
                 'data/nagios2json.php',
                 'data/pyap.sysconfig',
                 'data/51-blink1.rules',
-                'tests/tests.conf'
+                'tests/test.conf'
                 ]),
             ('share/doc/pyap/samples/status',[
                 'tests/status/n1',
