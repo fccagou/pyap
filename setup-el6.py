@@ -18,7 +18,7 @@
 
 from distutils.core  import setup
 setup(name='pyap',
-        version='0.1',
+        version='0.2',
         description='PYthon Alert Processor',
         url='http://github.com/fccagou/pyap',
         author='fccagou',
