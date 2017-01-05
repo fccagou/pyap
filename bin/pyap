@@ -10,40 +10,44 @@ import signal
 from threading import Thread
 import wsgiref.simple_server as server
 from db9 import Db9
+import json
 
+try:
+    # For Python 3.0 and later
+    from urllib.request import urlopen
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import urlopen
+
+
+
+# -----------------------------------------------------------------
+# Global Variables.
+# -----------------------------------------------------------------
+# Default web server listening port
 LISTENING_PORT = 8080
 
-OK_LED = Db9.PIN4
-CRITICAL_LED = Db9.PIN7
-
-# 3 color led.
-WARNING_LED = Db9.PIN4 | Db9.PIN7
-
-ACK = 0
-
-current_status = OK_LED
-got_security_alert = None
-got_unknown_state = None
-
-blink_secu_alert=0
-blink_unk_alert=1
-blink_error=2
-
-
-
-blinks_states=[]
-blinks_states.append(None)
-blinks_states.append(None)
-blinks_states.append(None)
-
-serial_output = None
+# For debuging
 verbose = False
 
-blink1=None
+# current higher status of alert.
+current_global_status = 'ok'
 
+# This flag is used to set/unset security alert to blink the notifiers.
+got_security_alert = False
+
+# Number of secondes fot autorefresh webstatus.
+web_status_refresh_sec=30
+
+# TODO: assemble NOTIFIERS, URLS and notifiers in new pyap/PollerPool class
+
+# Notifiers declared notifiers in conf file or on command line.
 NOTIFIERS = {}
+# URLS declared in conf file or on command line
 URLS = {}
+# list of instanciated notifier object
 notifiers=[]
+
 
 # -----------------------------------------------------------------
 # Informational functions.
@@ -81,87 +85,62 @@ def error(msg):
 # Blink notifiers.
 # -----------------------------------------------------------------
 
-def blink(led, state, stop):
+def blink(speed, again):
 
-    global serial_output
-    global blinks_states
     global notifiers
+    global current_global_status
 
-    for n in notifiers:
-        n.off()
-
-    while blinks_states[state] is not None and not stop():
-        for n in notifiers:
-            n.warning()
-        time.sleep(0.4)
+    while again():
         for n in notifiers:
             n.off()
-        time.sleep(0.4)
-
-try:
-    # For Python 3.0 and later
-    from urllib.request import urlopen
-except ImportError:
-    # Fall back to Python 2's urllib2
-    from urllib2 import urlopen
-
-import json
+        time.sleep(speed)
+        for n in notifiers:
+            getattr(n, current_global_status)()
+        time.sleep(speed)
 
 
 # -----------------------------------------------------------------
 # Poller status management.
 # -----------------------------------------------------------------
 def poller_get_status(notifiers,url,stop):
-
-    global serial_output
     global blinks_states
-    global blink1
+    global current_global_status
 
     while not stop():
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
-        if blinks_states[blink_secu_alert] is None:
-            try:
-                services = {'crit':0, 'warn':0, 'unknown':0, 'ok':0}
-                for u in url:
-                    info ("[+] Get status from %s" % u )
-                    poller_response = urlopen(u).read()
-                    info("poller status ( %s )" % poller_response.rstrip())
-                    poller_infos = json.loads(poller_response)
-                    for k in poller_infos['services'].keys():
-                        services[k] += poller_infos['services'][k]
+        try:
+            services = {'crit':0, 'warn':0, 'unknown':0, 'ok':0}
+            for u in url:
+                info ("[+] Get status from %s" % u )
+                poller_response = urlopen(u).read()
+                info("poller status ( %s )" % poller_response.rstrip())
+                poller_infos = json.loads(poller_response)
+                for k in poller_infos['services'].keys():
+                    services[k] += poller_infos['services'][k]
 
-                info("Global status ( %s )" % services)
-                blinks_states[blink_error] = None
+            info("Global status ( %s )" % services)
 
-                if services['crit'] > 0:
-                    blinks_states[blink_unk_alert] = None
-                    for n in notifiers:
-                        n.critical()
+            if services['crit'] > 0:
+                current_global_status='critical'
 
-                elif services['warn'] > 0:
-                    blinks_states[blink_unk_alert] = None
-                    for n in notifiers:
-                        n.warning()
+            elif services['warn'] > 0:
+                current_global_status='warning'
 
-                elif services['unknown'] > 0:
-                    if blinks_states[blink_unk_alert] is None:
-                        blinks_states[blink_unk_alert] =  1
-                        Thread(target=blink, args=(OK_LED, blink_unk_alert, stop)).start()
-                        if blink1 is not None:
-                            blink1.unknown()
-                elif services['ok'] > 0:
-                    blinks_states[blink_unk_alert] = None
-                    for n in notifiers:
-                        n.ok()
-                else:
-                    error("json error")
-            except:
-                blinks_states[blink_unk_alert] = None
-                if blinks_states[blink_error] is None:
-                    blinks_states[blink_error] = 1
-                    Thread(target=blink, args=(WARNING_LED, blink_error,stop)).start()
+            elif services['unknown'] > 0:
+                current_global_status='unknown'
 
-                error("error while getting status %s " % (sys.exc_info()[0]))
+            elif services['ok'] > 0:
+                current_global_status='ok'
+
+            else:
+                error("json error")
+
+            if not got_security_alert:
+                for n in notifiers:
+                    getattr(n,current_global_status)()
+
+        except:
+            error("error while getting status %s " % (sys.exc_info()[0]))
 
         time.sleep(10)
 
@@ -171,20 +150,20 @@ def poller_get_status(notifiers,url,stop):
 #  HTTP API to manage notifiers status.
 # -----------------------------------------------------------------
 
-def switch_on_alert(start_response, led):
+def switch_on_alert(start_response, alert_status):
 
-    global serial_output
-    global current_status
-    global blinks_states
+    global current_global_status
+    global notifiers
+    global got_security_alert
 
-    if blinks_states[blink_secu_alert] is None:
-        serial_output.switch_off(Db9.ALL_OUTPUT)
-        serial_output.switch_on(led)
+    current_global_status = alert_status
 
-    current_status = led
+    if not got_security_alert:
+        for n in notifiers:
+            getattr(n,current_global_status)()
 
     status = '200 OK'
-    output = "led %s on\n" % led
+    output = "Status is %s\n" % current_global_status
     response_headers = [('Content-type', 'text/plain'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
@@ -202,33 +181,22 @@ def notfound(start_response, url):
 
 
 def alert_critical(start_response):
-    global blink1
-    if blink1 is not None:
-        blink1.critical()
-    return switch_on_alert(start_response, CRITICAL_LED)
+    return switch_on_alert(start_response, 'critical')
 
 
 def alert_warning(start_response):
-    global blink1
-    if blink1 is not None:
-        blink1.warning()
-    return switch_on_alert(start_response, WARNING_LED)
+    return switch_on_alert(start_response, 'warning')
 
 
 def alert_ok(start_response):
-    global blink1
-    if blink1 is not None:
-        blink1.ok()
-    return switch_on_alert(start_response, OK_LED)
+    return switch_on_alert(start_response, 'ok')
 
 
 def alert_security(start_response):
-
-    global blinks_states
-
-    if blinks_states[blink_secu_alert] is None:
-        blinks_states[blink_secu_alert]=1
-        Thread(target=blink, args=(CRITICAL_LED, blink_secu_alert)).start()
+    global got_security_alert
+    if not got_security_alert:
+        got_security_alert=True
+        Thread(target=blink, args=(0.6, lambda: got_security_alert)).start()
 
     status = '200 OK'
     output = "security alerte !\n"
@@ -239,21 +207,15 @@ def alert_security(start_response):
 
 
 def alert_security_ack(start_response):
-
-    global blinks_states
-    blinks_states[blink_secu_alert]=None
+    global got_security_alert
+    got_security_alert=False
     # wait thread ending
     time.sleep(1)
-    serial_output.switch_off(Db9.ALL_OUTPUT)
-    return switch_on_alert(start_response, current_status)
+    return switch_on_alert(start_response, current_global_status)
 
 
 def alert_ack(start_response):
-    global blink1
-    if blink1 is not None:
-        blink1.ok()
-
-    return switch_on_alert(start_response, OK_LED)
+    return alert_ok(start_response)
 
 
 # -----------------------------------------------------------------
@@ -262,6 +224,9 @@ def alert_ack(start_response):
 def web_status(start_response):
     """Return web page with URLS status"""
     global URLS
+    global got_security_alert
+    global web_status_refresh_sec
+
     status = "200 OK"
     output="""<!DOCTYPE html>
 <html lang="en">
@@ -274,15 +239,15 @@ def web_status(start_response):
     <meta name="description" content="Get URLS status">
     <meta name="robots" content="all">
     <style>
-    body { background: #252830; box-sizing: border-box;
-     }
+    body { background: #252830; box-sizing: border-box; }
     .crit {color: white; background: #e64759; border-radius: 3px}
-    .warn {color: #e4d836;}
-    .unknown {color: orange}
+    .warn {color: orange; background: #e4d836; border-radius: 3px}
+    .unknown {color: black; background: #aaaaaa; border-radius: 3px}
     .ok {color: black; background: #1bc98e; border-radius: 3px}
+    .security {color: white; background: #ff0000; border-radius: 3px}
 
     .alz {padding: 20px !important }
-    .anj {font-weight: normal; color: rgba(255, 255, 255, 0.65);font-size: 85%;
+    .anj {font-weight: bold; color: rgba(255, 255, 255, 0.65);font-size: 85%;
         letter-spacing: .15em;
         text-transform: uppercase;
     }
@@ -297,6 +262,9 @@ def web_status(start_response):
 <body><div class="fu">
     """
     try:
+        if got_security_alert:
+            output+="""<div class="gq gg ala"><div class="security"><div class="alz"><span class="anj">Security ALERT</span></div><p> /!\ </p></div></div>"""
+
         for u in URLS:
             poller_infos = json.loads(urlopen(URLS[u]['url']).read())
             log(poller_infos)
@@ -309,7 +277,8 @@ def web_status(start_response):
                 cssclass='unknown'
 
             output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><p> %s, %s, %s, %s</p></div></div>""" % (cssclass,u,poller_infos['services']['ok'],poller_infos['services']['warn'], poller_infos['services']['crit'], poller_infos['services']['unknown'])
-        output += "</div></body></html>"
+
+        output += """</div><script>setInterval(function () { location.reload() }, %s000);</script></body></html>""" % (web_status_refresh_sec)
     except:
         status="500 INTERNAL ERROR"
         output="Fuck"
@@ -355,12 +324,12 @@ def pyap_application(environ, start_response):
 # -----------------------------------------------------------------
 def main():
 
-    global serial_output
     global verbose
-    global blink1
     global notifiers
     global NOTIFIERS
     global URLS
+    global got_security_alert
+
 
     # Catch signal to quit cleanly.
     signal.signal(signal.SIGHUP, signal.getsignal(signal.SIGINT))
@@ -458,7 +427,6 @@ def main():
                 notifiers.append(blink1)
             except:
                 warning ("Blink(1) not found")
-                blink1=None
                 if debug:
                     import traceback
                     warning ("Blink1 error: %s " %  sys.exc_info()[0])
@@ -520,11 +488,11 @@ def main():
 
     # Ending all process and switch notifiers off before leaving.
 
-    log("Waiting end of process")
     stop_thread=True
+    got_security_alert=False
 
-    for i in range(0,len(blinks_states)-1):
-        blinks_states[i] = None
+    log("Waiting end of process")
+    time.sleep(2)
 
     for n in notifiers:
         n.off()
