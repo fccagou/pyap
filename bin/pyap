@@ -42,7 +42,7 @@ verbose = False
 blink1=None
 
 NOTIFIERS = {}
-URLS = {} 
+URLS = {}
 notifiers=[]
 
 def log(msg):
@@ -242,6 +242,68 @@ def alert_ack(start_response):
     return switch_on_alert(start_response, OK_LED)
 
 
+def web_status(start_response):
+    """Return web page with URLS status"""
+    global URLS
+    status = "200 OK"
+    output="""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>pyap status</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="fccagou">
+    <meta name="description" content="Get URLS status">
+    <meta name="robots" content="all">
+    <style>
+    body { background: #252830; box-sizing: border-box;
+     }
+    .crit {color: white; background: #e64759; border-radius: 3px}
+    .warn {color: #e4d836;}
+    .unknown {color: orange}
+    .ok {color: black; background: #1bc98e; border-radius: 3px}
+
+    .alz {padding: 20px !important }
+    .anj {font-weight: normal; color: rgba(255, 255, 255, 0.65);font-size: 85%;
+        letter-spacing: .15em;
+        text-transform: uppercase;
+    }
+    .gq {float: left;}
+    .gg {width: 25%}
+    .ala {margin-bottom: 20px !important; margin-left: 10px}
+    .fu {
+       padding: 20px
+    }
+    </style>
+</head>
+<body><div class="fu">
+    """
+    try:
+        for u in URLS:
+            poller_infos = json.loads(urlopen(URLS[u]['url']).read())
+            log(poller_infos)
+            cssclass='ok'
+            if poller_infos['services']['crit'] > 0:
+                cssclass='crit'
+            elif  poller_infos['services']['warn'] > 0:
+                cssclass='warn'
+            elif  poller_infos['services']['unknown'] > 0:
+                cssclass='unknown'
+
+            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><p> %s, %s, %s, %s</p></div></div>""" % (cssclass,u,poller_infos['services']['ok'],poller_infos['services']['warn'], poller_infos['services']['crit'], poller_infos['services']['unknown'])
+        output += "</div></body></html>"
+    except:
+        status="500 INTERNAL ERROR"
+        output="Fuck"
+
+    log(type(output))
+
+    response_headers = [('Content-type', 'text/html; charset=UTF-8'),
+                        ('Content-Length', str(len(output)))]
+    start_response(status, response_headers)
+    return [str(output)]
+
 def pyap_application(environ, start_response):
 
     if environ['PATH_INFO'] == "/alert/critical":
@@ -261,6 +323,9 @@ def pyap_application(environ, start_response):
 
     if environ['PATH_INFO'] == "/alert/security/ack":
         return alert_security_ack(start_response)
+
+    if environ['PATH_INFO'] == "/":
+        return web_status(start_response)
 
     return notfound(start_response, environ['PATH_INFO'])
 
@@ -339,7 +404,7 @@ def main():
                 NOTIFIERS[n]['status']['ok'] = '#00FF00'
                 NOTIFIERS[n]['status']['warn'] = '#FFFF00'
                 NOTIFIERS[n]['status']['crit'] = '#FF0000'
-    
+
     if not len(NOTIFIERS):
         error('No notifier found !    C U Later !!')
         sys.exit(1)
@@ -375,7 +440,7 @@ def main():
 
 
         elif n_type == 'SerialLedNotifier':
-            
+
             try:
                 from pyap.serial_led_notifier import SerialLedNotifier
                 serial_led=SerialLedNotifier(
