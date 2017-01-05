@@ -45,6 +45,9 @@ NOTIFIERS = {}
 URLS = {}
 notifiers=[]
 
+# -----------------------------------------------------------------
+# Informational functions.
+# -----------------------------------------------------------------
 def log(msg):
     global verbose
     if verbose:
@@ -74,6 +77,9 @@ def error(msg):
         pass
 
 
+# -----------------------------------------------------------------
+# Blink notifiers.
+# -----------------------------------------------------------------
 
 def blink(led, state, stop):
 
@@ -102,6 +108,9 @@ except ImportError:
 import json
 
 
+# -----------------------------------------------------------------
+# Poller status management.
+# -----------------------------------------------------------------
 def poller_get_status(notifiers,url,stop):
 
     global serial_output
@@ -156,6 +165,11 @@ def poller_get_status(notifiers,url,stop):
 
         time.sleep(10)
 
+
+
+# -----------------------------------------------------------------
+#  HTTP API to manage notifiers status.
+# -----------------------------------------------------------------
 
 def switch_on_alert(start_response, led):
 
@@ -242,6 +256,9 @@ def alert_ack(start_response):
     return switch_on_alert(start_response, OK_LED)
 
 
+# -----------------------------------------------------------------
+# HTTP: default page showing all notifiers status.
+# -----------------------------------------------------------------
 def web_status(start_response):
     """Return web page with URLS status"""
     global URLS
@@ -304,6 +321,9 @@ def web_status(start_response):
     start_response(status, response_headers)
     return [str(output)]
 
+# -----------------------------------------------------------------
+# HTTP: WEB APP
+# -----------------------------------------------------------------
 def pyap_application(environ, start_response):
 
     if environ['PATH_INFO'] == "/alert/critical":
@@ -330,6 +350,9 @@ def pyap_application(environ, start_response):
     return notfound(start_response, environ['PATH_INFO'])
 
 
+# -----------------------------------------------------------------
+# MAIN PROGRAM.
+# -----------------------------------------------------------------
 def main():
 
     global serial_output
@@ -339,10 +362,11 @@ def main():
     global NOTIFIERS
     global URLS
 
+    # Catch signal to quit cleanly.
     signal.signal(signal.SIGHUP, signal.getsignal(signal.SIGINT))
     signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
 
-
+    # Process passed arguments.
     try:
         import argparse
         parser = argparse.ArgumentParser(
@@ -383,6 +407,7 @@ def main():
     if debug:
         log ("args list: %s " %  args)
 
+    # Get configuration from file.
     if args.conf is not None:
         log('Using config file %s' % args.conf)
         conf = json.loads(open(args.conf, 'r').read())
@@ -393,6 +418,7 @@ def main():
         log ("NOTIFIERS: %s" % NOTIFIERS)
         log ("URLS: %s" % URLS)
 
+    # Add notifiers passed in parameters if exist.
     if args.notifiers:
         for n in args.notifiers.split(','):
             if n == 'Blink1Notifier':
@@ -405,13 +431,16 @@ def main():
                 NOTIFIERS[n]['status']['warn'] = '#FFFF00'
                 NOTIFIERS[n]['status']['crit'] = '#FF0000'
 
+    # Running without Notifier has no sense.
     if not len(NOTIFIERS):
         error('No notifier found !    C U Later !!')
         sys.exit(1)
 
+    # Add Urls from parameters.
     for u in URLS:
         args.urls.append(URLS[u]['url'])
 
+    # Creates all Notifiers objects from configuration.
     for n in NOTIFIERS:
         n_type = NOTIFIERS[n]['type']
 
@@ -464,6 +493,8 @@ def main():
     stop_thread=False
     try:
         if args.server:
+            # If local status server is run, the polling process
+            # is run in a separate thread.
             if len(args.urls):
                 log("Running http poller")
                 poller = Thread(
@@ -486,6 +517,8 @@ def main():
         log('End asked by user...bye bye !')
     except:
         print ("Unexpected error:", sys.exc_info()[0])
+
+    # Ending all process and switch notifiers off before leaving.
 
     log("Waiting end of process")
     stop_thread=True
