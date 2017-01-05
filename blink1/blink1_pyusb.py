@@ -12,7 +12,7 @@ Linux (Ubuntu/Debian):
  Note: will give "not claimed" error or similar.  Try blink1.py instead
 
 Mac OS X:
- do "brew install libusb" on osx 
+ do "brew install libusb" on osx
  or "port install py26-pyusb-devel" on osx
 
 Windows:
@@ -23,8 +23,8 @@ Based on blink1hid-demo.py by Aaron Blondeau
 2013, Tod E. Kurt, http://thingm.com/
 
 """
-
-import usb 
+import sys
+import usb
 import time
 import string
 
@@ -37,10 +37,10 @@ class Blink1:
     def __init__(self):
         self.dev = None
         return self.find()
-    
+
     def find(self):
         self.dev = usb.core.find(idVendor=0x27b8, idProduct=0x01ed)
-        if( self.dev == None ): 
+        if( self.dev == None ):
             return None
 
         #print "kernel_driver_active:%i" % (self.dev.is_kernel_driver_active(0))
@@ -75,12 +75,12 @@ class Blink1:
         if debug_rw : print "blink1write:"+",".join('0x%02x' % v for v in buf)
         if( self.dev == None ): return self.notfound()
         bmRequestTypeOut = usb.util.build_request_type(usb.util.CTRL_OUT, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE)
-        self.dev.ctrl_transfer( bmRequestTypeOut, 
+        self.dev.ctrl_transfer( bmRequestTypeOut,
                                 0x09,    # == HID set_report
                                 (3 << 8) | report_id,  # (3==HID feat.report)
-                                0, 
-                                buf) 
-        
+                                0,
+                                buf)
+
     def read(self):
         """
         Read command result from blink(1)
@@ -88,10 +88,10 @@ class Blink1:
         Note: buf must be 8 bytes or bad things happen
         """
         bmRequestTypeIn = usb.util.build_request_type(usb.util.CTRL_IN, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE)
-        buf = self.dev.ctrl_transfer( bmRequestTypeIn, 
+        buf = self.dev.ctrl_transfer( bmRequestTypeIn,
                                       0x01,  # == HID get_report
-                                      (3 << 8) | report_id, 
-                                      0, 
+                                      (3 << 8) | report_id,
+                                      0,
                                       8 )    # == number of bytes to read
         if debug_rw : print "blink1read: "+",".join('0x%02x' % v for v in buf)
         return buf
@@ -99,7 +99,7 @@ class Blink1:
     def fade_to_rgbn(self, fadeMillis, red,green,blue, ledn):
         """
         Command blink(1) to fade to RGB color
-        
+
         """
         action = ord('c')
         fadeMillis = fadeMillis/10
@@ -111,7 +111,7 @@ class Blink1:
     def fade_to_rgb(self, fadeMillis, red,green,blue):
         """
         Command blink(1) to fade to RGB color
-        
+
         """
         return self.fade_to_rgbn(fadeMillis, red,green,blue,0)
 
@@ -141,7 +141,7 @@ class Blink1:
     def get_serialnumber(self):
         """
         Get blink(1) serial number
-        
+
         """
         if( self.dev == None ): return ''
         return usb.util.get_string(self.dev, 256, 3)
