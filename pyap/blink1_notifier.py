@@ -11,16 +11,27 @@ def blink_set_state(blink1,fade_millis,rgbstr,ledn=0):
 class Blink1Notifier (Notifier):
     """Abstract class to implement notifier"""
 
+    # TODO: Actually, I haven't tried to manage more than one Blink(1) device.
+    # So all Notifiers use the same device. It's possible to choose a different
+    # led by notifier. So more then 2 Blink1Notifier as no sens.
+    # The Notifier must change to allow more than one device.
+
+    __single_blink_object=None
+
     def __init__(self, state='unknown', alert_level=0,blinking=False,
            led = 0,
            crit_color = '#FF0000',
            warn_color = '#FF5500',
            ok_color = '#00FF00',
-           unknown_color = '#999999'
+           unknown_color = '#999999',
             ):
 
         super(Blink1Notifier,self).__init__(state,alert_level,blinking)
-        self.blink1=Blink1()
+
+        if Blink1Notifier.__single_blink_object is None:
+            Blink1Notifier.__single_blink_object = Blink1()
+
+        self.blink1=Blink1Notifier.__single_blink_object
         if( self.blink1.dev == None ):
             raise UserWarning('No blink(1) devine found')
 

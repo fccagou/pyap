@@ -21,6 +21,19 @@ Refactoring
 - have a thread to manage led states doing on/off
 - Use msgQ or something else to send new states to led state manager
 
+Notifiers
+=========
+
+Blink1Notifier
+--------------
+
+Actually, I haven't tried to manage more than one Blink(1) device.
+So all Notifiers use the same device. It's possible to choose a different
+led by notifier. So more than 2 Blink1Notifier as no sens.
+The Notifier must change to allow more than one device.
+
+
+
 Features
 ========
 
