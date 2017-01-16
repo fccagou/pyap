@@ -332,7 +332,6 @@ def main():
 
 
     # Catch signal to quit cleanly.
-    signal.signal(signal.SIGHUP, signal.getsignal(signal.SIGINT))
     signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
 
     # Process passed arguments.
