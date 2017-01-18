@@ -22,6 +22,6 @@ They are licensed under
 
 ---
 
-This file is part of PYAP. Copyright 2016
+This file is part of PYAP. Copyright 2016-2017
 [fccagou](mailto:fccagou@gmail.com)
 
