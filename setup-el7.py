@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 # This file is part of PYAP.
-# Copyright 2016 fccagou <fccagou@gmail.com>
+# Copyright 2016-2017 fccagou <fccagou@gmail.com>
 #
 # PYAP is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 
 from distutils.core  import setup
 setup(name='pyap',
-        version='0.3.1',
+        version='0.3.2',
         description='Python notification system',
         url='http://github.com/fccagou/pyap',
         author='fccagou',
@@ -52,5 +52,7 @@ setup(name='pyap',
                 'tests/status/n2',
                 ]
             ),
+            ('/etc/pyap', ['data/pyap.conf']),
+            ('/usr/lib/systemd/system', ['data/pyap.service']),
             ],
     )
