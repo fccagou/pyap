@@ -322,52 +322,13 @@ def pyap_application(environ, start_response):
 # -----------------------------------------------------------------
 # MAIN PROGRAM.
 # -----------------------------------------------------------------
-def main():
+def main(args):
 
     global verbose
     global notifiers
     global NOTIFIERS
     global URLS
     global got_security_alert
-
-
-    # Catch signal to quit cleanly.
-    signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
-
-    # Process passed arguments.
-    try:
-        import argparse
-        parser = argparse.ArgumentParser(
-            description='Notify processor.',
-            )
-        USING_ARGPARSE = True
-    except ImportError:
-        import optparse
-        parser = optparse.OptionParser(
-            description='PYthon Alert Processor.')
-        parser.parse_args_orig = parser.parse_args
-        parser.parse_args = lambda: parser.parse_args_orig()[0]
-        parser.add_argument = parser.add_option
-        USING_ARGPARSE = False
-
-    parser.add_argument('--conf', '-c',
-                        help='Configuration file.')
-    parser.add_argument('--notifiers', '-n',
-                        help='Notifiers list in Blink1Notifier,SerialLedNotifier')
-    parser.add_argument('--server','-s', action='store_true',
-                        help="Run http listening server (default=false)")
-    parser.add_argument('--port', '-p', default=LISTENING_PORT, type=int,
-                        help='Listening port for status push .')
-    parser.add_argument('--verbose', '-v', action='store_true',
-                        help='Verbose.')
-    parser.add_argument('--debug', '-d', action='store_true',
-                        help='Debug mode.')
-    parser.add_argument('urls', nargs='*',
-                        help='url for http state poller')
-
-
-
-    args = parser.parse_args()
 
     verbose = args.verbose
     debug = args.debug
@@ -497,6 +458,72 @@ def main():
         n.off()
 
 if __name__ == '__main__':
-    main ()
+
+    # Catch signal to quit cleanly.
+    signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
+
+    # Process passed arguments.
+    try:
+        import argparse
+        parser = argparse.ArgumentParser(
+            description='Notify processor.',
+            )
+        USING_ARGPARSE = True
+    except ImportError:
+        import optparse
+        parser = optparse.OptionParser(
+            description='PYthon Alert Processor.')
+        parser.parse_args_orig = parser.parse_args
+        parser.parse_args = lambda: parser.parse_args_orig()[0]
+        parser.add_argument = parser.add_option
+        USING_ARGPARSE = False
+
+    parser.add_argument('--conf', '-c',
+                        help='Configuration file.')
+    parser.add_argument('--notifiers', '-n',
+                        help='Notifiers list in Blink1Notifier,SerialLedNotifier')
+    parser.add_argument('--server','-s', action='store_true',
+                        help="Run http listening server (default=false)")
+    parser.add_argument('--port', '-p', default=LISTENING_PORT, type=int,
+                        help='Listening port for status push .')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Verbose.')
+    parser.add_argument('--debug', '-d', action='store_true',
+                        help='Debug mode.')
+    parser.add_argument('--fg', action='store_true',
+                        help='Forground mode. Disable daemon mode.')
+    parser.add_argument('--nopid', action='store_true',
+                        help='Disable writing pid file (see --pidfile)')
+    parser.add_argument('--pidfile', default='/var/run/pyap.pid',
+                        help='Set the pid file.')
+    parser.add_argument('urls', nargs='*',
+                        help='url for http state poller')
+
+    args = parser.parse_args()
+
+    if not args.fg:
+        # do the UNIX double-fork magic, see Stevens' "Advanced
+        # Programming in the UNIX Environment" for details (ISBN 0201563177)
+        if args.debug or args.verbose:
+            log('Running daemon mode.')
+
+        if os.fork() > 0:
+            sys.exit(0)
+        os.setsid()
+        # Double-fork magic must be single-fork for systemd
+        # TODO: test under centos6 using init.
+        # if os.fork() > 0:
+        #     sys.exit(0)
+
+    if not args.nopid:
+        with open(args.pidfile, 'w') as f:
+            f.write(str(os.getpid()))
+
+    main (args)
+
+    if not args.nopid:
+        os.remove(args.pidfile)
+
+    os._exit(os.EX_OK)
 
 
