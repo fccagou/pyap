@@ -33,32 +33,20 @@ led by notifier. So more than 2 Blink1Notifier as no sens.
 The Notifier must change to allow more than one device.
 
 
-
 Features
 ========
 
-- in bin/pyap, associate an url with notifiers to specify which notifier
-  to use for an url.
+- add syslog info for daemon mode
 
 - Serve web status page
 
-  If you only use 1 Led, the led color indicates the more critical status from
-  all the systems checked so you don't know which one is critical or not.
-  To have more details, pyap should serve a web page showing status for
-  each system checked.
-
-  It could be usefull to associate an alias to display for eah system checked and,
-  if possible, a link to external detailed web interface of the system checked
+  if possible, add a  link to external detailed web interface of the system checked
   (nagios/shinken)
-
-```
-    Icescreams dispenser :  (ok:  12)  (warn: 1)  (Unknown: 0) (crit: 0)
-    Subnet X             :  (ok: 254)  (warn: 2)  (Unknown: 0) (crit: 0)
-    IDS Alertes          :  (ok: 123)  (warn: 0)  (Unknown: 0) (crit: 1)
-
-```
+  Update colorscheme in conf file
 
 - implement blink and alert API.
+  /!\ - security access to web access.
+
 - add other notification types
 - incoming `pollers` for various sources
 
@@ -89,3 +77,21 @@ DONE
 ====
 - add conf file using json to set notifiers and urls.
 - add better logging.
+- add daemon mode
+- add init/systemd service for rpm system.
+- associate a notifier to an url.
+- Serve web status page
+
+  If you only use 1 Led, the led color indicates the more critical status from
+  all the systems checked so you don't know which one is critical or not.
+  To have more details, pyap should serve a web page showing status for
+  each system checked.
+
+  It could be usefull to associate an alias to display for eah system checked and,
+
+```
+    Icescreams dispenser :  (ok:  12)  (warn: 1)  (Unknown: 0) (crit: 0)
+    Subnet X             :  (ok: 254)  (warn: 2)  (Unknown: 0) (crit: 0)
+    IDS Alertes          :  (ok: 123)  (warn: 0)  (Unknown: 0) (crit: 1)
+
+```

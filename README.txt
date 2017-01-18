@@ -57,8 +57,11 @@ through http requests to switch leds on/off.
 
 Replace __PWD__ in tests/tests.conf according to your path and run the server:
 
+By default, pyap is running as daemon mode and writes his pid in /var/run/pyap.pid file.
+For tesing or debugging, use --nopid and --fg parameters.
+
 ```
-$ export PYTHONPATH=$(pwd); bin/pyap -v --server --conf=tests/test.conf
+$ export PYTHONPATH=$(pwd); bin/pyap --nopid --fg -v --server --conf=tests/test.conf
 [+] -  Using config file tests/test.conf
 [+] -  Blink(1) found
 [!] -  serial_led not found
