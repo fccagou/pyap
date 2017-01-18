@@ -28,6 +28,8 @@ case ${DISTRIB} in
 		requires="--requires=pyusb,libusb"
 esac
 
+cd ${0%\/*}
+
 python setup-${DISTRIB}.py -v bdist_rpm --release=$RELEASE --distribution-name=$DISTRIB --obsoletes=pyap ${requires}
 
 mv dist/pyap-$VERSION-$RELEASE.noarch.rpm dist/pyap-$VERSION-$RELEASE-$DISTRIB.noarch.rpm
