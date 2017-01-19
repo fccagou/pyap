@@ -521,7 +521,22 @@ if __name__ == '__main__':
 
         if os.fork() > 0:
             sys.exit(0)
+
+        # Decouple from parent environment
+        os.chdir('/')
         os.setsid()
+        # TODO os.umask()
+        # Redirect the standard I/O file descriptors to /dev/null
+        if hasattr(os, "devnull"):
+            REDIRECT_TO = os.devnull
+        else:
+            REDIRECT_TO = "/dev/null"
+
+        fd = os.open(REDIRECT_TO, os.O_RDWR)
+        os.dup2(fd, 0)  # standard input (0)
+        os.dup2(fd, 1)  # standard output (1)
+        os.dup2(fd, 2)  # standard error (2)
+
         # Double-fork magic must be single-fork for systemd
         # TODO: test under centos6 using init.
         # if os.fork() > 0:
