@@ -322,6 +322,15 @@ def pyap_application(environ, start_response):
 # -----------------------------------------------------------------
 # MAIN PROGRAM.
 # -----------------------------------------------------------------
+def EndException(BaseException):
+    def __init__(self, value):
+        self.value=value
+    def __str__(self):
+        return repr(self.value)
+
+def end_process(signum,frame):
+    raise EndException('Signal catch')
+
 def main(args):
 
     global verbose
@@ -332,6 +341,10 @@ def main(args):
 
     verbose = args.verbose
     debug = args.debug
+
+    # Catch signal to quit cleanly.
+    signal.signal(signal.SIGTERM, end_process)
+    signal.signal(signal.SIGQUIT, end_process)
 
     if debug:
         log ("args list: %s " %  args)
@@ -443,24 +456,23 @@ def main(args):
                 print ("[+] Nothing to poll or to serve... I leave ...")
     except KeyboardInterrupt:
         log('End asked by user...bye bye !')
+    except EndException as ee:
+        log(ee.value)
     except:
         print ("Unexpected error:", sys.exc_info()[0])
+    finally:
+        # Ending all process and switch notifiers off before leaving.
+        stop_thread=True
+        got_security_alert=False
 
-    # Ending all process and switch notifiers off before leaving.
+        log("Waiting end of process")
+        time.sleep(2)
 
-    stop_thread=True
-    got_security_alert=False
-
-    log("Waiting end of process")
-    time.sleep(2)
-
-    for n in notifiers:
-        n.off()
+        for n in notifiers:
+            n.off()
 
 if __name__ == '__main__':
 
-    # Catch signal to quit cleanly.
-    signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
 
     # Process passed arguments.
     try:
