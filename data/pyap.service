@@ -6,8 +6,9 @@ After=network.target remote-fs.target nss-lookup.target
 Type=forking
 PIDFile=/run/pyap.pid
 # Pyap will fail to start if /run/pyap.pid already exists but has the wrong
-# SELinux context. This might happen when running `nginx -t` from the cmdline.
+# SELinux context. 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1268621
+EnvironmentFile=-/etc/sysconfig/pyap
 ExecStartPre=/usr/bin/rm -f /run/pyap.pid
 #ExecStartPre=
 ExecStart=/usr/bin/pyap -v -d --pidfile=/run/pyap.pid --conf=/etc/pyap/pyap.conf
