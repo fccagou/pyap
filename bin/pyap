@@ -276,11 +276,22 @@ def web_status(start_response):
             elif  poller_infos['services']['unknown'] > 0:
                 cssclass='unknown'
 
-            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><p> %s, %s, %s, %s</p></div></div>""" % (cssclass,u,poller_infos['services']['ok'],poller_infos['services']['warn'], poller_infos['services']['crit'], poller_infos['services']['unknown'])
+	    try:	
+		detail_url="""<a href="%s">more detail</a>""" % URLS[u]['detail']
+	    except:
+		detail_url=" "
+
+
+            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><p>%s</p><p> %s, %s, %s, %s</p></div></div>""" % (cssclass,u,detail_url,poller_infos['services']['ok'],poller_infos['services']['warn'], poller_infos['services']['crit'], poller_infos['services']['unknown'])
 
         output += """</div><script>setInterval(function () { location.reload() }, %s000);</script></body></html>""" % (web_status_refresh_sec)
     except:
         status="500 INTERNAL ERROR"
+        import traceback
+        warning ("INTERNAL ERROR: %s " %  sys.exc_info()[0])
+        print ('-'*60)
+        traceback.print_exc(file=sys.stdout)
+        print ('-'*60)
         output="Fuck"
 
     log(type(output))
