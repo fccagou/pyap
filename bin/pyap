@@ -39,12 +39,12 @@ got_security_alert = False
 # Number of secondes fot autorefresh webstatus.
 web_status_refresh_sec=30
 
-# TODO: assemble NOTIFIERS, URLS and notifiers in new pyap/PollerPool class
+# TODO: assemble NOTIFIERS, POLLERS and notifiers in new pyap/PollerPool class
 
 # Notifiers declared notifiers in conf file or on command line.
 NOTIFIERS = {}
-# URLS declared in conf file or on command line
-URLS = {}
+# POLLERS declared in conf file or on command line
+POLLERS = {}
 # list of instanciated notifier object
 notifiers=[]
 
@@ -114,9 +114,9 @@ def poller_get_status(notifiers,url,stop):
                 info ("[+] Get status from %s" % u )
                 poller_response = urlopen(u).read()
                 info("poller status ( %s )" % poller_response.rstrip())
-                poller_infos = json.loads(poller_response)
-                for k in poller_infos['services'].keys():
-                    services[k] += poller_infos['services'][k]
+                poller_status = json.loads(poller_response)
+                for k in poller_status['services'].keys():
+                    services[k] += poller_status['services'][k]
 
             info("Global status ( %s )" % services)
 
@@ -222,8 +222,8 @@ def alert_ack(start_response):
 # HTTP: default page showing all notifiers status.
 # -----------------------------------------------------------------
 def web_status(start_response):
-    """Return web page with URLS status"""
-    global URLS
+    """Return web page with POLLERS status"""
+    global POLLERS
     global got_security_alert
     global web_status_refresh_sec
 
@@ -236,7 +236,7 @@ def web_status(start_response):
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="fccagou">
-    <meta name="description" content="Get URLS status">
+    <meta name="description" content="Get POLLERS status">
     <meta name="robots" content="all">
     <style>
     body { background: #252830; box-sizing: border-box; }
@@ -265,24 +265,24 @@ def web_status(start_response):
         if got_security_alert:
             output+="""<div class="gq gg ala"><div class="security"><div class="alz"><span class="anj">Security ALERT</span></div><p> /!\ </p></div></div>"""
 
-        for u in URLS:
-            poller_infos = json.loads(urlopen(URLS[u]['url']).read())
-            log(poller_infos)
+        for p in POLLERS:
+            poller_status = json.loads(urlopen(POLLERS[p]['url']).read())
+            log(poller_status)
             cssclass='ok'
-            if poller_infos['services']['crit'] > 0:
+            if poller_status['services']['crit'] > 0:
                 cssclass='crit'
-            elif  poller_infos['services']['warn'] > 0:
+            elif  poller_status['services']['warn'] > 0:
                 cssclass='warn'
-            elif  poller_infos['services']['unknown'] > 0:
+            elif  poller_status['services']['unknown'] > 0:
                 cssclass='unknown'
 
 	    try:	
-		detail_url="""<a href="%s">more detail</a>""" % URLS[u]['detail']
+		detail_url="""<a href="%s">more detail</a>""" % POLLERS[p]['detail_url']
 	    except:
 		detail_url=" "
 
 
-            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><p>%s</p><p> %s, %s, %s, %s</p></div></div>""" % (cssclass,u,detail_url,poller_infos['services']['ok'],poller_infos['services']['warn'], poller_infos['services']['crit'], poller_infos['services']['unknown'])
+            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><p>%s</p><p> %s, %s, %s, %s</p></div></div>""" % (cssclass,p,detail_url,poller_status['services']['ok'],poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
 
         output += """</div><script>setInterval(function () { location.reload() }, %s000);</script></body></html>""" % (web_status_refresh_sec)
     except:
@@ -347,7 +347,7 @@ def main(args):
     global verbose
     global notifiers
     global NOTIFIERS
-    global URLS
+    global POLLERS
     global got_security_alert
 
     verbose = args.verbose
@@ -365,11 +365,11 @@ def main(args):
         log('Using config file %s' % args.conf)
         conf = json.loads(open(args.conf, 'r').read())
         NOTIFIERS = conf['NOTIFIERS']
-        URLS = conf['URLS']
+        POLLERS = conf['POLLERS']
 
     if debug:
         log ("NOTIFIERS: %s" % NOTIFIERS)
-        log ("URLS: %s" % URLS)
+        log ("POLLERS: %s" % POLLERS)
 
     # Add notifiers passed in parameters if exist.
     if args.notifiers:
@@ -390,8 +390,8 @@ def main(args):
         sys.exit(1)
 
     # Add Urls from parameters.
-    for u in URLS:
-        args.urls.append(URLS[u]['url'])
+    for u in POLLERS:
+        args.urls.append(POLLERS[u]['url'])
 
     # Creates all Notifiers objects from configuration.
     for n in NOTIFIERS:
