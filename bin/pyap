@@ -245,8 +245,9 @@ def web_status(start_response):
     .unknown {color: black; background: #aaaaaa; border-radius: 3px}
     .ok {color: black; background: #1bc98e; border-radius: 3px}
     .security {color: white; background: #ff0000; border-radius: 3px}
-
-    .alz {padding: 20px !important }
+    .nb  {padding: 5px }
+    .alz {padding: 10px !important }
+    .desc {padding: 10px !important }
     .anj {font-weight: bold; color: rgba(255, 255, 255, 0.65);font-size: 85%;
         letter-spacing: .15em;
         text-transform: uppercase;
@@ -282,7 +283,7 @@ def web_status(start_response):
 		detail_url=" "
 
 
-            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><p>%s</p><p> %s, %s, %s, %s</p></div></div>""" % (cssclass,p,detail_url,poller_status['services']['ok'],poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
+            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p><span class="ok nb">%s</span><span class="warn nb">%s</span><span class="crit nb">%s</span><span class="unknown nb">%s</span></p></div></div></div>""" % (cssclass,p,detail_url,poller_status['services']['ok'],poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
 
         output += """</div><script>setInterval(function () { location.reload() }, %s000);</script></body></html>""" % (web_status_refresh_sec)
     except:
