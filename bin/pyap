@@ -365,7 +365,12 @@ def main(args):
         log('Using config file %s' % args.conf)
         conf = json.loads(open(args.conf, 'r').read())
         NOTIFIERS = conf['NOTIFIERS']
-        POLLERS = conf['POLLERS']
+	if 'POLLERS' in conf.keys():
+            POLLERS = conf['POLLERS']
+	# kept in v0.4.x for compatibility with 0.3.x versions
+	# This will be removed in next version 0.5
+	elif 'URLS' in conf.keys():
+            POLLERS = conf['URLS']
 
     if debug:
         log ("NOTIFIERS: %s" % NOTIFIERS)
