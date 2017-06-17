@@ -241,14 +241,15 @@ def web_status(start_response):
     <style>
     body { background: #252830; box-sizing: border-box; }
     .crit {color: white; background: #e64759; border-radius: 3px}
-    .warn {color: orange; background: #e4d836; border-radius: 3px}
-    .unknown {color: black; background: #aaaaaa; border-radius: 3px}
+    .warn {color: #ff4400; background: #e4d836; border-radius: 3px}
+    .unknown {color: black; background: #aa00aa; border-radius: 3px}
     .ok {color: black; background: #1bc98e; border-radius: 3px}
     .security {color: white; background: #ff0000; border-radius: 3px}
+    .error {color: red; background: #aaaaaa; border-radius: 3px}
     .nb  {padding: 5px }
     .alz {padding: 10px !important }
     .desc {padding: 10px !important }
-    .anj {font-weight: bold; color: rgba(255, 255, 255, 0.65);font-size: 85%;
+    .anj {font-weight: bold; font-size: 85%;
         letter-spacing: .15em;
         text-transform: uppercase;
     }
@@ -267,23 +268,28 @@ def web_status(start_response):
             output+="""<div class="gq gg ala"><div class="security"><div class="alz"><span class="anj">Security ALERT</span></div><p> /!\ </p></div></div>"""
 
         for p in POLLERS:
-            poller_status = json.loads(urlopen(POLLERS[p]['url']).read())
-            log(poller_status)
-            cssclass='ok'
-            if poller_status['services']['crit'] > 0:
-                cssclass='crit'
-            elif  poller_status['services']['warn'] > 0:
-                cssclass='warn'
-            elif  poller_status['services']['unknown'] > 0:
-                cssclass='unknown'
+	    try:
 
-	    try:	
-		detail_url="""<a href="%s">more detail</a>""" % POLLERS[p]['detail_url']
+                try:
+                    detail_url="""<a href="%s">more detail</a>""" % POLLERS[p]['detail_url']
+                except:
+                    detail_url=" "
+
+                poller_status = json.loads(urlopen(POLLERS[p]['url']).read())
+                log(poller_status)
+                cssclass='ok'
+                if poller_status['services']['crit'] > 0:
+                    cssclass='crit'
+                elif  poller_status['services']['warn'] > 0:
+                    cssclass='warn'
+                elif  poller_status['services']['unknown'] > 0:
+                    cssclass='unknown'
+
+                output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p><span class="ok nb">%s</span><span class="warn nb">%s</span><span class="crit nb">%s</span><span class="unknown nb">%s</span></p></div></div></div>""" % (cssclass,p,detail_url,poller_status['services']['ok'],poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
+
 	    except:
-		detail_url=" "
-
-
-            output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p><span class="ok nb">%s</span><span class="warn nb">%s</span><span class="crit nb">%s</span><span class="unknown nb">%s</span></p></div></div></div>""" % (cssclass,p,detail_url,poller_status['services']['ok'],poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
+		cssclass='error'
+                output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p>Monitoring server seems DOWN.</p></div></div></div>""" % (cssclass,p,detail_url)
 
         output += """</div><script>setInterval(function () { location.reload() }, %s000);</script></body></html>""" % (web_status_refresh_sec)
     except:
@@ -293,7 +299,7 @@ def web_status(start_response):
         print ('-'*60)
         traceback.print_exc(file=sys.stdout)
         print ('-'*60)
-        output="Fuck"
+        output="The code seems to have an internal error :("
 
     log(type(output))
 
