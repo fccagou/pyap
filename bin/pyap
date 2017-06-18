@@ -30,9 +30,6 @@ LISTENING_PORT = 8080
 # For debuging
 verbose = False
 
-# current higher status of alert.
-current_global_status = 'ok'
-
 # This flag is used to set/unset security alert to blink the notifiers.
 got_security_alert = False
 
@@ -47,6 +44,7 @@ NOTIFIERS = {}
 POLLERS = {}
 # list of instanciated notifier object
 notifiers=[]
+STATUS_LEVEL=['crit','warn','unknown','ok']
 
 
 # -----------------------------------------------------------------
@@ -87,60 +85,88 @@ def error(msg):
 
 def blink(speed, again):
 
-    global notifiers
-    global current_global_status
+    global NOTIFIERS
+
+    # Get only active notifiers.
+
+    active_notifiers=[]
+    for n in NOTIFIERS:
+        if NOTIFIERS[n]['notifier'] is not None:
+            active_notifiers.append(NOTIFIERS[n]['notifier'])
 
     while again():
-        for n in notifiers:
-            n.off()
-        time.sleep(speed)
-        for n in notifiers:
-            getattr(n, current_global_status)()
-        time.sleep(speed)
+        try:
+            for n in active_notifiers:
+                n.set_state('off')
+            time.sleep(speed)
+            for n in active_notifiers:
+                n.set_state(n.prev_state)
+            time.sleep(speed)
+        except:
+            error("error while getting status %s " % (sys.exc_info()[0]))
+            import traceback
+            warning ("error: %s " %  sys.exc_info()[0])
+            print ('~'*60)
+            traceback.print_exc(file=sys.stdout)
+            print ('~'*60)
 
 
 # -----------------------------------------------------------------
 # Poller status management.
 # -----------------------------------------------------------------
-def poller_get_status(notifiers,url,stop):
+def poller_get_status(notifiers,pollers,stop):
     global blinks_states
-    global current_global_status
+    global STATUS_LEVEL
 
     while not stop():
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
         try:
             services = {'crit':0, 'warn':0, 'unknown':0, 'ok':0}
-            for u in url:
-                info ("[+] Get status from %s" % u )
-                poller_response = urlopen(u).read()
-                info("poller status ( %s )" % poller_response.rstrip())
-                poller_status = json.loads(poller_response)
-                for k in poller_status['services'].keys():
-                    services[k] += poller_status['services'][k]
 
-            info("Global status ( %s )" % services)
+            for p in pollers:
+                try:
+                    u=pollers[p]['url']
+                    info ("[+] Get status from %s" % u )
+                    poller_response = urlopen(u).read()
+                    info("poller status ( %s )" % poller_response.rstrip())
+                    poller_status = json.loads(poller_response)
 
-            if services['crit'] > 0:
-                current_global_status='critical'
+                    if pollers[p]['notifier'] is not None and NOTIFIERS.has_key(pollers[p]['notifier']):
+                        n = NOTIFIERS[pollers[p]['notifier']]['notifier']
 
-            elif services['warn'] > 0:
-                current_global_status='warning'
+                        if poller_status['services']['crit'] > 0:
+                            current_status='critical'
 
-            elif services['unknown'] > 0:
-                current_global_status='unknown'
+                        elif poller_status['services']['warn'] > 0:
+                            current_status='warning'
 
-            elif services['ok'] > 0:
-                current_global_status='ok'
+                        elif poller_status['services']['unknown'] > 0:
+                            current_status='unknown'
 
-            else:
-                error("json error")
+                        elif poller_status['services']['ok'] > 0:
+                            current_status='ok'
 
-            if not got_security_alert:
-                for n in notifiers:
-                    getattr(n,current_global_status)()
+                        else:
+                            error("json error")
+
+                        if not got_security_alert:
+                            info("[-] - notify status ( %s )" % current_status)
+                            n.set_state(current_status)
+
+                    for k in poller_status['services'].keys():
+                        services[k] += poller_status['services'][k]
+
+                except:
+                    error("error while getting status %s " % (sys.exc_info()[0]))
+
 
         except:
             error("error while getting status %s " % (sys.exc_info()[0]))
+            import traceback
+            warning ("error: %s " %  sys.exc_info()[0])
+            print ('#'*60)
+            traceback.print_exc(file=sys.stdout)
+            print ('#'*60)
 
         time.sleep(10)
 
@@ -153,17 +179,20 @@ def poller_get_status(notifiers,url,stop):
 def switch_on_alert(start_response, alert_status):
 
     global current_global_status
-    global notifiers
+    global NOTIFIERS
     global got_security_alert
 
-    current_global_status = alert_status
-
     if not got_security_alert:
-        for n in notifiers:
-            getattr(n,current_global_status)()
+        for n in NOTIFIERS:
+            if NOTIFIERS[n]['notifier'] is not None:
+                an = NOTIFIERS[n]['notifier']
+                if alert_status is None:
+                    alert_status = an.state
+
+                an.set_state(alert_status)
 
     status = '200 OK'
-    output = "Status is %s\n" % current_global_status
+    output = "Status is %s\n" % alert_status
     response_headers = [('Content-type', 'text/plain'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
@@ -211,7 +240,7 @@ def alert_security_ack(start_response):
     got_security_alert=False
     # wait thread ending
     time.sleep(1)
-    return switch_on_alert(start_response, current_global_status)
+    return switch_on_alert(start_response, None)
 
 
 def alert_ack(start_response):
@@ -372,10 +401,10 @@ def main(args):
         log('Using config file %s' % args.conf)
         conf = json.loads(open(args.conf, 'r').read())
         NOTIFIERS = conf['NOTIFIERS']
-	if 'POLLERS' in conf.keys():
+        if 'POLLERS' in conf.keys():
             POLLERS = conf['POLLERS']
-	# kept in v0.4.x for compatibility with 0.3.x versions
-	# This will be removed in next version 0.5
+        # kept in v0.4.x for compatibility with 0.3.x versions
+        # This will be removed in next version 0.5
 	elif 'URLS' in conf.keys():
             POLLERS = conf['URLS']
 
@@ -395,13 +424,37 @@ def main(args):
                 NOTIFIERS[n]['status']['ok'] = '#00FF00'
                 NOTIFIERS[n]['status']['warn'] = '#FFFF00'
                 NOTIFIERS[n]['status']['crit'] = '#FF0000'
+                NOTIFIERS[n]['current_status'] = NOTIFIERS[n]['default_status']
+
 
     # Running without Notifier has no sense.
     if not len(NOTIFIERS):
         error('No notifier found !    C U Later !!')
         sys.exit(1)
 
-    # Add Urls from parameters.
+    # Add Urls from parameters creating pollers
+    # url form :   [poller_name[,notifier_name]=]url
+    for i in range (0, len(args.urls)):
+        try:
+	   (poller_name,url)=args.urls[i].split('=')
+           try:
+		(poller_name,notifier_name) = poller_name.split(',')
+		if not notifier_name in NOTIFIERS.keys():
+		    notifier_name = None
+	   except:
+		notifier_name=None
+
+	except:
+	   poller_name="poller_arg_%d" % i
+	   url = args.urls[i]
+
+	POLLERS[poller_name] = {}
+	POLLERS[poller_name]['url'] = url
+	if notifier_name:
+	   POLLERS[poller_name]['notifier'] = notifier_name
+	else:
+	   POLLERS[poller_name]['notifier'] = None
+
     for u in POLLERS:
         args.urls.append(POLLERS[u]['url'])
 
@@ -411,8 +464,9 @@ def main(args):
 
         if n_type == 'Blink1Notifier':
             try:
+
                 from pyap.blink1_notifier import Blink1Notifier
-                blink1=Blink1Notifier(
+                NOTIFIERS[n]['notifier'] = Blink1Notifier(
                         led = NOTIFIERS[n]['led'],
                         state = NOTIFIERS[n]['default_status'],
                         ok_color = NOTIFIERS[n]['status']['ok'],
@@ -420,8 +474,9 @@ def main(args):
                         crit_color = NOTIFIERS[n]['status']['crit'],
                         )
                 log("Blink(1) found")
-                notifiers.append(blink1)
+
             except:
+                NOTIFIERS[n]['notifier']=None
                 warning ("Blink(1) not found")
                 if debug:
                     import traceback
@@ -436,13 +491,14 @@ def main(args):
 
             try:
                 from pyap.serial_led_notifier import SerialLedNotifier
-                serial_led=SerialLedNotifier(
+                NOTIFIERS[n]['notifier'] = SerialLedNotifier(
                         NOTIFIERS[n]['tty'],
                         state=NOTIFIERS[n]['default_status'],
                         )
                 log("serial_led found")
-                notifiers.append(serial_led)
+
             except:
+                NOTIFIERS[n]['notifier']=None
                 warning("serial_led not found")
                 serial_led=None
                 if debug:
@@ -451,6 +507,8 @@ def main(args):
                     print ('-'*60)
                     traceback.print_exc(file=sys.stdout)
                     print ('-'*60)
+	else:
+	    NOTIFIERS[n]['notifier']=None
 
     poller = None
 
@@ -459,11 +517,11 @@ def main(args):
         if args.server:
             # If local status server is run, the polling process
             # is run in a separate thread.
-            if len(args.urls):
+            if len(POLLERS):
                 log("Running http poller")
                 poller = Thread(
                         target=poller_get_status,
-                        args=(notifiers, args.urls,lambda: stop_thread)
+                        args=(NOTIFIERS, POLLERS,lambda: stop_thread)
                         )
                 poller.start()
 
@@ -473,8 +531,8 @@ def main(args):
             # Respond to requests until process is killed
             httpd.serve_forever()
         else:
-            if len(args.urls):
-                poller_get_status(notifiers, args.urls, lambda: stop_thread)
+            if len(POLLERS):
+                poller_get_status(NOTIFIERS, POLLERS, lambda: stop_thread)
             else:
                 print ("[+] Nothing to poll or to serve... I leave ...")
     except KeyboardInterrupt:
@@ -491,8 +549,9 @@ def main(args):
         log("Waiting end of process")
         time.sleep(2)
 
-        for n in notifiers:
-            n.off()
+        for n in NOTIFIERS:
+	    if NOTIFIERS[n]['notifier'] is not None:
+                NOTIFIERS[n]['notifier'].off()
 
 if __name__ == '__main__':
 
