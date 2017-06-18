@@ -40,8 +40,7 @@ Features
 
 - Serve web status page
 
-  if possible, add a  link to external detailed web interface of the system checked
-  (nagios/shinken)
+  Set Color according to notifier color
   Update colorscheme in conf file
 
 - implement blink and alert API.
@@ -52,7 +51,6 @@ Features
 
   - alerts with different levels: nagios, shinken ...
   - incomming mail: thunderbid, mutt, fetchmail,  ...
-
 
 
 ```

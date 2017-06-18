@@ -19,7 +19,7 @@
 
 from distutils.core  import setup
 setup(name='pyap',
-        version='0.4.2',
+        version='0.4.3',
         description='Python notification system',
         url='http://github.com/fccagou/pyap',
         author='fccagou',
