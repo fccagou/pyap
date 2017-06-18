@@ -6,12 +6,13 @@ class Notifier (object):
 
     def __init__(self, state='off', alert_level=0,blinking=False):
         super(Notifier,self).__init__()
+        self.prev_state=state
         self.state=state
         self.alert_level=alert_level
         self.blinking=blinking
 
     def set_state(self,state):
-        prev_state=self.state
+        self.prev_state=self.state
         try:
             getattr(self,state)()
         except AttributeError:
