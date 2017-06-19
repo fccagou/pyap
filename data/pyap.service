@@ -11,7 +11,7 @@ PIDFile=/run/pyap.pid
 EnvironmentFile=-/etc/sysconfig/pyap
 ExecStartPre=/usr/bin/rm -f /run/pyap.pid
 #ExecStartPre=
-ExecStart=/usr/bin/pyap -v -d --pidfile=/run/pyap.pid --conf=/etc/pyap/pyap.conf
+ExecStart=/usr/bin/pyap --pidfile=/run/pyap.pid $PYAP_OPTS
 #ExecReload=/bin/kill -s HUP $MAINPID
 KillSignal=SIGTERM
 TimeoutStopSec=5

@@ -10,4 +10,5 @@
 # URL=http://nagiosserver/nagios2json.php
 # URL="file:///usr/share/doc/pyap/samples/status/n1 file:///usr/share/doc/pyap/samples/status/n2"
 # Others pyap options (see pyap --help)
-# PYAP_OPTS=""
+#PYAP_OPTS="-v -s --conf=/etc/pyap/pyap.conf "
+PYAP_OPTS=""
