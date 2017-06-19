@@ -127,7 +127,7 @@ def poller_get_status(notifiers,pollers,stop):
                 try:
                     u=pollers[p]['url']
                     info ("[+] Get status from %s" % u )
-                    poller_response = urlopen(u).read()
+                    poller_response = urlopen(u,timeout=2).read()
                     info("poller status ( %s )" % poller_response.rstrip())
                     poller_status = json.loads(poller_response)
 
@@ -304,7 +304,7 @@ def web_status(start_response):
                 except:
                     detail_url=" "
 
-                poller_status = json.loads(urlopen(POLLERS[p]['url']).read())
+                poller_status = json.loads(urlopen(POLLERS[p]['url'],timeout=2).read())
                 log(poller_status)
                 cssclass='ok'
                 if poller_status['services']['crit'] > 0:
