@@ -58,7 +58,7 @@ setup(name='pyap',
                 'tests/status/n2',
                 ]
             ),
-            ('/etc/pyap', ['']),
+            ('/etc/pyap/pyap.conf.sample', ['data/pyap.conf']),
             ('/etc/init.d',['data/etc/init.d/pyap']),
             ],
     )

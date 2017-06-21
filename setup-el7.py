@@ -52,7 +52,7 @@ setup(name='pyap',
                 'tests/status/n2',
                 ]
             ),
-            ('/etc/pyap', ['']),
+            ('/etc/pyap/pyap.conf.sample', ['data/pyap.conf']),
             ('/usr/lib/systemd/system', ['data/pyap.service']),
             ],
     )
