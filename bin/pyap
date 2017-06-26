@@ -123,7 +123,8 @@ def poller_get_status(notifiers,pollers,stop):
     while not stop():
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
         try:
-            services = {'crit':0, 'warn':0, 'unknown':0, 'ok':0}
+	    # global status by notifier.
+	    status_by_notifier={}
 
             for p in pollers:
                 try:
@@ -133,33 +134,48 @@ def poller_get_status(notifiers,pollers,stop):
                     info("poller status ( %s )" % poller_response.rstrip())
                     poller_status = json.loads(poller_response)
 
-                    if pollers[p]['notifier'] is not None and NOTIFIERS.has_key(pollers[p]['notifier']):
-                        n = NOTIFIERS[pollers[p]['notifier']]['notifier']
+		    notifier_name = pollers[p]['notifier']
 
-                        if poller_status['services']['crit'] > 0:
-                            current_status='critical'
-
-                        elif poller_status['services']['warn'] > 0:
-                            current_status='warning'
-
-                        elif poller_status['services']['unknown'] > 0:
-                            current_status='unknown'
-
-                        elif poller_status['services']['ok'] > 0:
-                            current_status='ok'
-
-                        else:
-                            error("json error")
-
-                        if not got_security_alert:
-                            info("[-] - notify status ( %s )" % current_status)
-                            n.set_state(current_status)
-
-                    for k in poller_status['services'].keys():
-                        services[k] += poller_status['services'][k]
+                    if  notifier_name is not None and NOTIFIERS.has_key(notifier_name):
+			if not status_by_notifier.has_key(notifier_name):
+			   status_by_notifier[notifier_name] = {'crit':0, 'warn':0, 'unknown':0, 'ok':0}
+			
+                    	for k in poller_status['services'].keys():
+                           status_by_notifier[notifier_name][k] += poller_status['services'][k]
 
                 except:
                     error("error while getting status %s " % (sys.exc_info()[0]))
+            	    import traceback
+            	    warning ("error: %s " %  sys.exc_info()[0])
+            	    print ('.'*60)
+            	    traceback.print_exc(file=sys.stdout)
+            	    print ('.'*60)
+
+            for k in status_by_notifier.keys():
+	
+                if status_by_notifier[k]['crit'] > 0:
+                    current_status='critical'
+
+                elif status_by_notifier[k]['warn'] > 0:
+                    current_status='warning'
+
+                elif status_by_notifier[k]['unknown'] > 0:
+                    current_status='unknown'
+
+                elif status_by_notifier[k]['ok'] > 0:
+                    current_status='ok'
+
+                else:
+                    error("json error")
+                    current_status='unknown'
+
+                if got_security_alert:
+		    # FIME: UGLY because of blinking implementation Have to implement notifier.blink()
+                    info("[-] - Notifier %s status ( %s )" % (k, current_status))
+                    notifiers[k]['notifier'].state=current_status
+		else:
+                    info("[-] - Notifier %s status ( %s )" % (k, current_status))
+                    notifiers[k]['notifier'].set_state(current_status)
 
 
         except:
