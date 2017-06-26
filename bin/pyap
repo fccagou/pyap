@@ -117,6 +117,8 @@ def blink(speed, again):
 def poller_get_status(notifiers,pollers,stop):
     global blinks_states
     global STATUS_LEVEL
+    global got_security_alert
+
 
     while not stop():
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
