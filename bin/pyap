@@ -45,6 +45,8 @@ POLLERS = {}
 # list of instanciated notifier object
 notifiers=[]
 STATUS_LEVEL=['crit','warn','unknown','ok']
+# Document Root for static web pages.
+document_root='/etc/pyap/html'
 
 
 # -----------------------------------------------------------------
@@ -307,6 +309,7 @@ def web_status(start_response):
        padding: 20px
     }
     </style>
+    <link href="/css/style.css" rel="stylesheet" type="text/css" />
 </head>
 <body><div class="fu">
     """
@@ -355,6 +358,24 @@ def web_status(start_response):
     start_response(status, response_headers)
     return [str(output)]
 
+
+def web_page(start_response, path_info):
+    global document_root
+    filename="%s%s" % (document_root, path_info)
+    # Sanitize
+    filename=filename.replace('../','').replace('./','')
+    try:
+        output=open(filename, 'r').read()
+        status = "200 OK"
+    except:
+        output="Page not found %s" % path_info
+        status = "404 NOT FOUND"
+
+    response_headers = [('Content-type', 'text/plain; charset=UTF-8'),
+                        ('Content-Length', str(len(output)))]
+    start_response(status, response_headers)
+    return [str(output)]
+
 # -----------------------------------------------------------------
 # HTTP: WEB APP
 # -----------------------------------------------------------------
@@ -377,6 +398,9 @@ def pyap_application(environ, start_response):
 
     if environ['PATH_INFO'] == "/alert/security/ack":
         return alert_security_ack(start_response)
+
+    if environ['PATH_INFO'].startswith("/css/"):
+        return web_page(start_response, environ['PATH_INFO'])
 
     if environ['PATH_INFO'] == "/":
         return web_status(start_response)
@@ -403,6 +427,7 @@ def main(args):
     global NOTIFIERS
     global POLLERS
     global got_security_alert
+    global document_root
 
     verbose = args.verbose
     debug = args.debug
@@ -426,9 +451,17 @@ def main(args):
 	elif 'URLS' in conf.keys():
             POLLERS = conf['URLS']
 
+    if args.documentroot:
+	document_root = args.documentroot
+    elif conf.has_key('documentroot'):
+	document_root = conf['documentroot']
+
+    document_root = os.path.abspath(document_root)
+
     if debug:
         log ("NOTIFIERS: %s" % NOTIFIERS)
         log ("POLLERS: %s" % POLLERS)
+        log ("document_root: %s" % document_root)
 
     # Add notifiers passed in parameters if exist.
     if args.notifiers:
@@ -608,6 +641,8 @@ if __name__ == '__main__':
                         help='Disable writing pid file (see --pidfile)')
     parser.add_argument('--pidfile', default='/var/run/pyap.pid',
                         help='Set the pid file.')
+    parser.add_argument('--documentroot', '-D', default=None,
+                        help='Document root for static web pages.')
     parser.add_argument('urls', nargs='*',
                         help='url for http state poller')
 
