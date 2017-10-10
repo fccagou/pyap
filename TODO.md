@@ -2,6 +2,12 @@
 TODO LIST
 *********
 
+FIXME
+=====
+
+- in python >= 2.7.5, the default ssl context used by urllib2.urlopen does not
+  accept ausigned certs. => must ad a way to set ssl context if ur scheme
+  is https.
 
 Packaging
 =========
@@ -33,18 +39,17 @@ led by notifier. So more than 2 Blink1Notifier as no sens.
 The Notifier must change to allow more than one device.
 
 
+Security
+========
+
+- run pyap has an unprivileged user when serving status pages
+- Add ssl support for served pages
+
+
 Features
 ========
 
 - add syslog info for daemon mode
-
-- Serve web status page
-
-  Set Color according to notifier color
-  Update colorscheme in conf file
-
-- implement blink and alert API.
-  /!\ - security access to web access.
 
 - add other notification types
 - incoming `pollers` for various sources
@@ -93,3 +98,5 @@ DONE
     IDS Alertes          :  (ok: 123)  (warn: 0)  (Unknown: 0) (crit: 1)
 
 ```
+- implement blink and alert API.
+  /!\ - security access to web access.
