@@ -18,7 +18,7 @@
 
 from distutils.core  import setup
 setup(name='pyap',
-        version='0.4.5',
+        version='0.4.6',
         description='PYthon Alert Processor',
         url='http://github.com/fccagou/pyap',
         author='fccagou',
@@ -60,5 +60,6 @@ setup(name='pyap',
             ),
             ('/etc/pyap/pyap.conf.sample', ['data/pyap.conf']),
             ('/etc/init.d',['data/etc/init.d/pyap']),
+	    ('/etc/pyap/html/css', ['data/html/css/style.css']),
             ],
     )

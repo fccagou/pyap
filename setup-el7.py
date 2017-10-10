@@ -19,7 +19,7 @@
 
 from distutils.core  import setup
 setup(name='pyap',
-        version='0.4.5',
+        version='0.4.6',
         description='Python notification system',
         url='http://github.com/fccagou/pyap',
         author='fccagou',
@@ -54,5 +54,6 @@ setup(name='pyap',
             ),
             ('/etc/pyap/pyap.conf.sample', ['data/pyap.conf']),
             ('/usr/lib/systemd/system', ['data/pyap.service']),
+	    ('/etc/pyap/html/css', ['data/html/css/style.css']),
             ],
     )
