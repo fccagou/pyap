@@ -11,6 +11,7 @@ from threading import Thread
 import wsgiref.simple_server as server
 from db9 import Db9
 import json
+import ssl
 
 try:
     # For Python 3.0 and later
@@ -47,6 +48,9 @@ notifiers=[]
 STATUS_LEVEL=['crit','warn','unknown','ok']
 # Document Root for static web pages.
 document_root='/etc/pyap/html'
+
+# ssl context for unverified site.
+ssl_default_ctx=None
 
 
 # -----------------------------------------------------------------
@@ -120,6 +124,7 @@ def poller_get_status(notifiers,pollers,stop):
     global blinks_states
     global STATUS_LEVEL
     global got_security_alert
+    global ssl_default_ctx
 
 
     while not stop():
@@ -132,7 +137,7 @@ def poller_get_status(notifiers,pollers,stop):
                 try:
                     u=pollers[p]['url']
                     info ("[+] Get status from %s" % u )
-                    poller_response = urlopen(u,timeout=2).read()
+                    poller_response = urlopen(u,timeout=2,context=ssl_default_ctx).read()
                     info("poller status ( %s )" % poller_response.rstrip())
                     poller_status = json.loads(poller_response)
 
@@ -275,6 +280,7 @@ def web_status(start_response):
     global POLLERS
     global got_security_alert
     global web_status_refresh_sec
+    global ssl_default_ctx
 
     status = "200 OK"
     output="""<!DOCTYPE html>
@@ -325,7 +331,7 @@ def web_status(start_response):
                 except:
                     detail_url=" "
 
-                poller_status = json.loads(urlopen(POLLERS[p]['url'],timeout=2).read())
+                poller_status = json.loads(urlopen(POLLERS[p]['url'],timeout=2,context=ssl_default_ctx).read())
                 log(poller_status)
                 cssclass='ok'
                 if poller_status['services']['crit'] > 0:
@@ -428,6 +434,7 @@ def main(args):
     global POLLERS
     global got_security_alert
     global document_root
+    global ssl_default_ctx
 
     verbose = args.verbose
     debug = args.debug
@@ -457,6 +464,10 @@ def main(args):
 	document_root = conf['documentroot']
 
     document_root = os.path.abspath(document_root)
+
+
+    if conf.has_key('ssl_allow_unverified') and conf['ssl_allow_unverified'] == "True":
+	ssl_default_ctx = ssl._create_unverified_context()
 
     if debug:
         log ("NOTIFIERS: %s" % NOTIFIERS)
