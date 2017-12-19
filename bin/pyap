@@ -52,6 +52,21 @@ document_root='/etc/pyap/html'
 # ssl context for unverified site.
 ssl_default_ctx=None
 
+ascii_msg_christmas="""
+.:*~*:._.:*~*:._.:*~*:._.:*~*:._.:*~*:._.:*~*:.
+.     *                                       .
+.    /.\                                      .
+.   /..'\       Merry                         .
+.   /'.'\                                     .
+.  /.''.'\                                    .
+.  /.'.'.\          CHRISTMAS                 .
+. /'.''.'.\                                   .
+. ^^^[_]^^^                                   .
+.                                             .
+.                                             .
+.                                             .
+.:*~*:._.:*~*:._.:*~*:._.:*~*:._.:*~*:._.:*~*:.
+"""
 
 # -----------------------------------------------------------------
 # Informational functions.
@@ -108,6 +123,41 @@ def blink(speed, again):
             for n in active_notifiers:
                 n.set_state(n.prev_state)
             time.sleep(speed)
+        except:
+            error("error while getting status %s " % (sys.exc_info()[0]))
+            import traceback
+            warning ("error: %s " %  sys.exc_info()[0])
+            print ('~'*60)
+            traceback.print_exc(file=sys.stdout)
+            print ('~'*60)
+
+def christmas(speed, again):
+
+    global NOTIFIERS
+
+    # Get only active notifiers.
+    from pyap.blink1_notifier import Blink1Notifier
+    import random
+    active_notifiers=[]
+    for n in NOTIFIERS:
+        if NOTIFIERS[n]['notifier'] is not None and type (NOTIFIERS[n]['notifier']) == Blink1Notifier:
+            active_notifiers.append(NOTIFIERS[n]['notifier'])
+
+    while again():
+        try:
+            for i in range(1,random.randint(2,10)):
+               for n in active_notifiers:
+                    n.blink1.fade_to_rgbn(0,0,0,0,n.led)
+                    time.sleep(random.random())
+                    n.blink1.fade_to_rgbn(n.fade_millis
+			,random.randint(0,100)
+			,random.randint(0,100)
+			,random.randint(0,100)
+                        ,n.led)
+            for n in active_notifiers:
+               getattr(n,n.state)()
+            time.sleep(2.0)
+
         except:
             error("error while getting status %s " % (sys.exc_info()[0]))
             import traceback
@@ -246,14 +296,14 @@ def alert_ok(start_response):
     return switch_on_alert(start_response, 'ok')
 
 
-def alert_security(start_response):
+def alert_custom(start_response, alert_fct, alert_msg):
     global got_security_alert
     if not got_security_alert:
         got_security_alert=True
-        Thread(target=blink, args=(0.6, lambda: got_security_alert)).start()
+        Thread(target=alert_fct, args=(0.6, lambda: got_security_alert)).start()
 
     status = '200 OK'
-    output = "security alerte !\n"
+    output = "%s\n" % alert_msg
     response_headers = [('Content-type', 'text/plain'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
@@ -387,6 +437,8 @@ def web_page(start_response, path_info):
 # -----------------------------------------------------------------
 def pyap_application(environ, start_response):
 
+    global ascii_msg_christmas
+
     if environ['PATH_INFO'] == "/alert/critical":
         return alert_critical(start_response)
 
@@ -400,7 +452,10 @@ def pyap_application(environ, start_response):
         return alert_ack(start_response)
 
     if environ['PATH_INFO'] == "/alert/security":
-        return alert_security(start_response)
+        return alert_custom(start_response, blink, 'security alert !')
+
+    if environ['PATH_INFO'] == "/alert/christmas":
+        return alert_custom(start_response, christmas, ascii_msg_christmas)
 
     if environ['PATH_INFO'] == "/alert/security/ack":
         return alert_security_ack(start_response)
