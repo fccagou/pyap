@@ -2,13 +2,6 @@
 TODO LIST
 *********
 
-FIXME
-=====
-
-- in python >= 2.7.5, the default ssl context used by urllib2.urlopen does not
-  accept ausigned certs. => must ad a way to set ssl context if ur scheme
-  is https.
-
 Packaging
 =========
 
@@ -26,6 +19,7 @@ Refactoring
 - bin/pyap is a quick and dirty code for tests. The code must be refactored.
 - have a thread to manage led states doing on/off
 - Use msgQ or something else to send new states to led state manager
+- Security alert manager and alert functions must be extrated from main code.
 
 Notifiers
 =========
@@ -100,3 +94,6 @@ DONE
 ```
 - implement blink and alert API.
   /!\ - security access to web access.
+- in python >= 2.7.5, the default ssl context used by urllib2.urlopen does not
+  accept ausigned certs. => since v0.4.6, ssl_allow_unverified cna be set in conf file.
+

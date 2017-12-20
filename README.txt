@@ -86,6 +86,9 @@ curl http://127.0.0.1:8080/alert/ack
 
 curl http://127.0.0.1:8080/alert/security
 curl http://127.0.0.1:8080/alert/security/ack
+
+curl http://127.0.0.1:8080/alert/christmas
+curl http://127.0.0.1:8080/alert/christmas/ack
 ```
 
 
