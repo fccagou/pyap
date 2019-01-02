@@ -268,7 +268,12 @@ def poller_get_status(notifiers,pollers,stop):
                 try:
                     u=pollers[p]['url']
                     info ("[+] Get status from %s" % u )
-                    poller_response = urlopen(u,timeout=2,context=ssl_default_ctx).read()
+                    try:
+                        poller_response = urlopen(u,timeout=2,context=ssl_default_ctx).read()
+                    except:
+                        warning ("error: opening %s " %  u )
+                        poller_response = '{"services":{ "ok":0, "warn":0, "crit":0, "unknown":1}}'
+
                     info("poller status ( %s )" % poller_response.rstrip())
                     poller_status = json.loads(poller_response)
 
