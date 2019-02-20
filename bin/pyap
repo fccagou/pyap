@@ -16,9 +16,11 @@ import ssl
 try:
     # For Python 3.0 and later
     from urllib.request import urlopen
+    myurlopen = urlopen3
 except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import urlopen
+    myurlopen = urlopen2
 
 
 
@@ -100,7 +102,21 @@ def error(msg):
         pass
 
 
+# -----------------------------------------------------------------
+#  python wrapper
+# -----------------------------------------------------------------
 
+def urlopen2 (url, timeout, context):
+    return urlopen(url, timeout)
+
+
+def urlopen3 (url, timeout, context):
+    return urlopen(url, timeout, context)
+
+
+# -----------------------------------------------------------------
+#
+# -----------------------------------------------------------------
 
 
 class SecurityAlertManager(object):
@@ -269,7 +285,7 @@ def poller_get_status(notifiers,pollers,stop):
                     u=pollers[p]['url']
                     info ("[+] Get status from %s" % u )
                     try:
-                        poller_response = urlopen(u,timeout=2,context=ssl_default_ctx).read()
+                        poller_response = myurlopen(u,timeout=2,context=ssl_default_ctx).read()
                     except:
                         warning ("error: opening %s " %  u )
                         poller_response = '{"services":{ "ok":0, "warn":0, "crit":0, "unknown":1}}'
@@ -496,7 +512,13 @@ def web_status(start_response):
                 except:
                     detail_url=" "
 
-                poller_status = json.loads(urlopen(POLLERS[p]['url'],timeout=2,context=ssl_default_ctx).read())
+                try:
+                    poller_response = myurlopen(POLLERS[p]['url'],timeout=2,context=ssl_default_ctx).read()
+                except:
+                    warning ("error: opening %s " %  u )
+                    poller_response = '{"services":{ "ok":0, "warn":0, "crit":0, "unknown":1}}'
+
+                poller_status = json.loads(urlopen(poller_response)
                 log(poller_status)
                 cssclass='ok'
                 if poller_status['services']['crit'] > 0:
