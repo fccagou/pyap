@@ -12,7 +12,7 @@ Development
 
 - make tests case
 - make a choise to manage pyusb/blink1 source code. Use git module ?
-
+- migrate to https://github.com/todbot/blink1-python code
 Refactoring
 ===========
 
