@@ -128,10 +128,10 @@ class SecurityAlertManager(object):
         self.thread=None
 
     def add(self,alert_type, priority=50,alert_fct=None):
-        if not self.alerts.has_key(alert_type):
-            self.alerts[alert_type]= {'priority': priority, 'count': 1 , 'fct': alert_fct }
-        else:
+        if alert_type in self.alerts:
             self.alerts[alert_type]['count']+=1
+        else:
+            self.alerts[alert_type]= {'priority': priority, 'count': 1 , 'fct': alert_fct }
 
         info("Add secu alert %s(%d => %s)" % (alert_type, self.alerts[alert_type]['priority'], self.alerts[alert_type]['fct']))
 
@@ -142,7 +142,7 @@ class SecurityAlertManager(object):
 
 
     def rm(self,alert_type):
-        if self.alerts.has_key(alert_type) and self.alerts[alert_type]['count'] > 0:
+        if alert_type in self.alerts and self.alerts[alert_type]['count'] > 0:
             self.alerts[alert_type]['count']-=1
 
         info("Rm secu alert %s (%d) (%d => %s)" % (alert_type, self.alerts[alert_type]['count'], self.alerts[alert_type]['priority'], self.alerts[alert_type]['fct']))
@@ -171,7 +171,7 @@ class SecurityAlertManager(object):
                 self.thread=None
 
     def reset(self,alert_type):
-        if self.alerts.has_key(alert_type) and self.alerts[alert_type]['count'] > 0:
+        if alert_type in self.alerts and self.alerts[alert_type]['count'] > 0:
             self.alerts[alert_type]['count']=0
 
     def restart(self):
@@ -292,13 +292,13 @@ def poller_get_status(notifiers,pollers,stop):
 
                     notifier_name = pollers[p]['notifier']
 
-                    if  notifier_name is not None and NOTIFIERS.has_key(notifier_name):
-                        if not status_by_notifier.has_key(notifier_name):
+                    if  notifier_name is not None and notifier_name in NOTIFIERS:
+                        if notifier_name not in status_by_notifier:
                             status_by_notifier[notifier_name] = {'crit':0, 'warn':0, 'unknown':0, 'ok':0, 'security':0}
 
                         for k in poller_status['services'].keys():
                             # Allow dynamiq status.
-                            if not status_by_notifier[notifier_name].has_key(k):
+                            if k not in status_by_notifier[notifier_name]:
                                 status_by_notifier[notifier_name][k]=0
                             status_by_notifier[notifier_name][k] += int(poller_status['services'][k])
 
@@ -315,8 +315,8 @@ def poller_get_status(notifiers,pollers,stop):
             for k in status_by_notifier.keys():
 
                 for at in security_alert_manager.alerts.keys():
-                    if status_by_notifier[k].has_key(at):
-                        if not poller_security.has_key(at):
+                    if at in status_by_notifier[k]:
+                        if at not in poller_security:
                             poller_security[at]=0
 
                         poller_security[at]+=status_by_notifier[k][at]
@@ -652,16 +652,16 @@ def main(args):
 
     if args.documentroot:
         document_root = args.documentroot
-    elif conf.has_key('documentroot'):
+    elif 'documentroot' in conf:
         document_root = conf['documentroot']
 
     document_root = os.path.abspath(document_root)
 
 
-    if conf.has_key('ssl_allow_unverified') and conf['ssl_allow_unverified'] == "True":
+    if 'ssl_allow_unverified' in conf and conf['ssl_allow_unverified'] == "True":
         ssl_default_ctx = ssl._create_unverified_context()
 
-    if conf.has_key('ALERTMANAGERS'):
+    if 'ALERTMANAGERS' in conf:
         ALERTMANAGERS=conf['ALERTMANAGERS']
     else:
         ALERTMANAGERS={}
@@ -670,10 +670,10 @@ def main(args):
         ALERTMANAGERS[k]['count'] = 0
         ALERTMANAGERS[k]['fct'] = globals()[ALERTMANAGERS[k]['fct']]
 
-    if not ALERTMANAGERS.has_key('api_security'):
+    if 'api_security' not in ALERTMANAGERS:
         ALERTMANAGERS['api_security'] = {'priority':1, 'fct': am_blink, 'count': 0 }
 
-    if not ALERTMANAGERS.has_key('api_christmas'):
+    if 'api_christmas' not in ALERTMANAGERS:
         ALERTMANAGERS['api_christmas'] = {'priority':11, 'fct': am_christmas, 'count': 0 }
 
     if debug:
