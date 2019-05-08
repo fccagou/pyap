@@ -100,50 +100,64 @@ def error(msg):
         pass
 
 
+# -----------------------------------------------------------------
+#  python wrapper
+# -----------------------------------------------------------------
 
+def urlopen2 (url, timeout, context):
+    return urlopen(url, timeout)
+
+
+def urlopen3 (url, timeout, context):
+    return urlopen(url, timeout, context)
+
+
+# -----------------------------------------------------------------
+#
+# -----------------------------------------------------------------
 
 
 class SecurityAlertManager(object):
 
     def __init__(self, alerts={}):
-	super(SecurityAlertManager, self).__init__()
-	self.alerts=alerts
-	self.got_alert=False
+        super(SecurityAlertManager, self).__init__()
+        self.alerts=alerts
+        self.got_alert=False
         self.current_priority=50
         self.current_fct=None
-	self.thread=None
+        self.thread=None
 
     def add(self,alert_type, priority=50,alert_fct=None):
-	if not self.alerts.has_key(alert_type):
-	    self.alerts[alert_type]= {'priority': priority, 'count': 1 , 'fct': alert_fct }
-	else:
-	    self.alerts[alert_type]['count']+=1
+        if not self.alerts.has_key(alert_type):
+            self.alerts[alert_type]= {'priority': priority, 'count': 1 , 'fct': alert_fct }
+        else:
+            self.alerts[alert_type]['count']+=1
 
         info("Add secu alert %s(%d => %s)" % (alert_type, self.alerts[alert_type]['priority'], self.alerts[alert_type]['fct']))
 
         if self.alerts[alert_type]['priority'] < self.current_priority or not self.got_alert:
-	    self.current_priority = self.alerts[alert_type]['priority']
-	    self.current_fct = self.alerts[alert_type]['fct']
-	    self.restart()
+            self.current_priority = self.alerts[alert_type]['priority']
+            self.current_fct = self.alerts[alert_type]['fct']
+            self.restart()
 
 
     def rm(self,alert_type):
-	if self.alerts.has_key(alert_type) and self.alerts[alert_type]['count'] > 0:
-	    self.alerts[alert_type]['count']-=1
+        if self.alerts.has_key(alert_type) and self.alerts[alert_type]['count'] > 0:
+            self.alerts[alert_type]['count']-=1
 
         info("Rm secu alert %s (%d) (%d => %s)" % (alert_type, self.alerts[alert_type]['count'], self.alerts[alert_type]['priority'], self.alerts[alert_type]['fct']))
         info("Current priority is %d " % self.current_priority)
 
-	if self.alerts[alert_type]['count'] == 0 and self.current_priority == self.alerts[alert_type]['priority']:
-	    self.reload()
+        if self.alerts[alert_type]['count'] == 0 and self.current_priority == self.alerts[alert_type]['priority']:
+            self.reload()
 
     def reload(self):
         self.current_priority=500
         nb=0
         info("Current priority set to %d " % self.current_priority)
-	for k in self.alerts.keys():
+        for k in self.alerts.keys():
             nb=+self.alerts[k]['count']
-	    if self.alerts[k]['count'] > 0 and self.alerts[k]['priority'] < self.current_priority:
+            if self.alerts[k]['count'] > 0 and self.alerts[k]['priority'] < self.current_priority:
                 info("Change secu alert to %s (%d) (%d => %s)" % (k, self.alerts[k]['count'], self.alerts[k]['priority'], self.alerts[k]['fct']))
                 self.current_priority=self.alerts[k]['priority']
                 self.current_fct=self.alerts[k]['fct']
@@ -152,27 +166,26 @@ class SecurityAlertManager(object):
         else:
            self.got_alert = False
            if self.thread is not None:
-	      while self.thread.is_alive():
-                 time.sleep(1)
-	      self.thread=None
-	
+                while self.thread.is_alive():
+                    time.sleep(1)
+                self.thread=None
 
     def reset(self,alert_type):
-	if self.alerts.has_key(alert_type) and self.alerts[alert_type]['count'] > 0:
-	    self.alerts[alert_type]['count']=0
+        if self.alerts.has_key(alert_type) and self.alerts[alert_type]['count'] > 0:
+            self.alerts[alert_type]['count']=0
 
     def restart(self):
-         info("Restarting AlertSecuManager")
-	 if self.thread is not None:
+        info("Restarting AlertSecuManager")
+        if self.thread is not None:
             info("Waiting end of previous thread")
             self.got_alert = False
-	    while self.thread.is_alive():
-    	       time.sleep(1)
+            while self.thread.is_alive():
+                time.sleep(1)
 
-         info("Running new alert function %s " % self.current_fct)
-         self.got_alert = True
-         self.thread=Thread(target=self.current_fct, args=(0.6, lambda: self.got_alert))
-	 self.thread.start()
+        info("Running new alert function %s " % self.current_fct)
+        self.got_alert = True
+        self.thread=Thread(target=self.current_fct, args=(0.6, lambda: self.got_alert))
+        self.thread.start()
 
 
     def got_alert(self):
@@ -231,9 +244,9 @@ def am_christmas(speed, again):
                     n.blink1.fade_to_rgbn(0,0,0,0,n.led)
                     time.sleep(random.random())
                     n.blink1.fade_to_rgbn(n.fade_millis
-			,random.randint(0,100)
-			,random.randint(0,100)
-			,random.randint(0,100)
+                        ,random.randint(0,100)
+                        ,random.randint(0,100)
+                        ,random.randint(0,100)
                         ,n.led)
             for n in active_notifiers:
                getattr(n,n.state)()
@@ -261,8 +274,8 @@ def poller_get_status(notifiers,pollers,stop):
     while not stop():
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
         try:
-	    # global status by notifier.
-	    status_by_notifier={}
+            # global status by notifier.
+            status_by_notifier={}
 
             for p in pollers:
                 try:
@@ -277,36 +290,36 @@ def poller_get_status(notifiers,pollers,stop):
                     info("poller status ( %s )" % poller_response.rstrip())
                     poller_status = json.loads(poller_response)
 
-		    notifier_name = pollers[p]['notifier']
+                    notifier_name = pollers[p]['notifier']
 
                     if  notifier_name is not None and NOTIFIERS.has_key(notifier_name):
-			if not status_by_notifier.has_key(notifier_name):
-			   status_by_notifier[notifier_name] = {'crit':0, 'warn':0, 'unknown':0, 'ok':0, 'security':0}
-			
-                    	for k in poller_status['services'].keys():
-			   # Allow dynamiq status.
-			   if not status_by_notifier[notifier_name].has_key(k):
-				status_by_notifier[notifier_name][k]=0
-                           status_by_notifier[notifier_name][k] += int(poller_status['services'][k])
+                        if not status_by_notifier.has_key(notifier_name):
+                            status_by_notifier[notifier_name] = {'crit':0, 'warn':0, 'unknown':0, 'ok':0, 'security':0}
+
+                        for k in poller_status['services'].keys():
+                            # Allow dynamiq status.
+                            if not status_by_notifier[notifier_name].has_key(k):
+                                status_by_notifier[notifier_name][k]=0
+                            status_by_notifier[notifier_name][k] += int(poller_status['services'][k])
 
                 except:
                     error("error while getting status %s " % (sys.exc_info()[0]))
-            	    import traceback
-            	    warning ("error: %s " %  sys.exc_info()[0])
-            	    print ('.'*60)
-            	    traceback.print_exc(file=sys.stdout)
-            	    print ('.'*60)
+                    import traceback
+                    warning ("error: %s " %  sys.exc_info()[0])
+                    print ('.'*60)
+                    traceback.print_exc(file=sys.stdout)
+                    print ('.'*60)
 
-	    poller_security={}
+            poller_security={}
 
             for k in status_by_notifier.keys():
 
-		for at in security_alert_manager.alerts.keys():
-		   if status_by_notifier[k].has_key(at):
-                      if not poller_security.has_key(at):
-                         poller_security[at]=0
+                for at in security_alert_manager.alerts.keys():
+                    if status_by_notifier[k].has_key(at):
+                        if not poller_security.has_key(at):
+                            poller_security[at]=0
 
-		      poller_security[at]+=status_by_notifier[k][at]
+                        poller_security[at]+=status_by_notifier[k][at]
 
 
                 if status_by_notifier[k]['crit'] > 0:
@@ -326,19 +339,19 @@ def poller_get_status(notifiers,pollers,stop):
                     current_status='unknown'
 
                 if security_alert_manager.got_alert:
-		    # FIME: UGLY because of blinking implementation Have to implement notifier.blink()
+                    # FIME: UGLY because of blinking implementation Have to implement notifier.blink()
                     info("[-] - Notifier %s status ( %s )" % (k, current_status))
                     notifiers[k]['notifier'].state=current_status
-		else:
+                else:
                     info("[-] - Notifier %s status ( %s )" % (k, current_status))
                     notifiers[k]['notifier'].set_state(current_status)
 
-	    for k in poller_security.keys():
-		if poller_security[k] > 0:
-		      security_alert_manager.reset(k)
-                      security_alert_manager.add(k)
-	        else:
-		   security_alert_manager.rm(k)
+            for k in poller_security.keys():
+                if poller_security[k] > 0:
+                    security_alert_manager.reset(k)
+                    security_alert_manager.add(k)
+                else:
+                    security_alert_manager.rm(k)
 
 
         except:
@@ -489,7 +502,7 @@ def web_status(start_response):
             output+="""<div class="gq gg ala"><div class="security"><div class="alz"><span class="anj">Security ALERT</span></div><p> /!\ </p></div></div>"""
 
         for p in POLLERS:
-	    try:
+            try:
 
                 try:
                     detail_url="""<a href="%s">more detail</a>""" % POLLERS[p]['detail_url']
@@ -508,8 +521,8 @@ def web_status(start_response):
 
                 output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p><span class="ok nb">%s</span><span class="warn nb">%s</span><span class="crit nb">%s</span><span class="unknown nb">%s</span></p></div></div></div>""" % (cssclass,p,detail_url,poller_status['services']['ok'],poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
 
-	    except:
-		cssclass='error'
+            except:
+                cssclass='error'
                 output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p>Monitoring server seems DOWN.</p></div></div></div>""" % (cssclass,p,detail_url)
 
         output += """</div><script>setInterval(function () { location.reload() }, %s000);</script></body></html>""" % (web_status_refresh_sec)
@@ -630,24 +643,24 @@ def main(args):
             POLLERS = conf['POLLERS']
         # kept in v0.4.x for compatibility with 0.3.x versions
         # This will be removed in next version 0.5
-	elif 'URLS' in conf.keys():
+        elif 'URLS' in conf.keys():
             POLLERS = conf['URLS']
 
     if args.documentroot:
-	document_root = args.documentroot
+        document_root = args.documentroot
     elif conf.has_key('documentroot'):
-	document_root = conf['documentroot']
+        document_root = conf['documentroot']
 
     document_root = os.path.abspath(document_root)
 
 
     if conf.has_key('ssl_allow_unverified') and conf['ssl_allow_unverified'] == "True":
-	ssl_default_ctx = ssl._create_unverified_context()
+        ssl_default_ctx = ssl._create_unverified_context()
 
     if conf.has_key('ALERTMANAGERS'):
-	ALERTMANAGERS=conf['ALERTMANAGERS']
+        ALERTMANAGERS=conf['ALERTMANAGERS']
     else:
-	ALERTMANAGERS={}
+        ALERTMANAGERS={}
 
     for k in ALERTMANAGERS.keys():
         ALERTMANAGERS[k]['count'] = 0
@@ -691,24 +704,24 @@ def main(args):
     # url form :   [poller_name[,notifier_name]=]url
     for i in range (0, len(args.urls)):
         try:
-	   (poller_name,url)=args.urls[i].split('=')
-           try:
-		(poller_name,notifier_name) = poller_name.split(',')
-		if not notifier_name in NOTIFIERS.keys():
-		    notifier_name = None
-	   except:
-		notifier_name=None
+            (poller_name,url)=args.urls[i].split('=')
+            try:
+                (poller_name,notifier_name) = poller_name.split(',')
+                if not notifier_name in NOTIFIERS.keys():
+                    notifier_name = None
+            except:
+                notifier_name=None
 
-	except:
-	   poller_name="poller_arg_%d" % i
-	   url = args.urls[i]
+        except:
+            poller_name="poller_arg_%d" % i
+            url = args.urls[i]
 
-	POLLERS[poller_name] = {}
-	POLLERS[poller_name]['url'] = url
-	if notifier_name:
-	   POLLERS[poller_name]['notifier'] = notifier_name
-	else:
-	   POLLERS[poller_name]['notifier'] = None
+        POLLERS[poller_name] = {}
+        POLLERS[poller_name]['url'] = url
+        if notifier_name:
+            POLLERS[poller_name]['notifier'] = notifier_name
+        else:
+            POLLERS[poller_name]['notifier'] = None
 
     for u in POLLERS:
         args.urls.append(POLLERS[u]['url'])
@@ -762,8 +775,8 @@ def main(args):
                     print ('-'*60)
                     traceback.print_exc(file=sys.stdout)
                     print ('-'*60)
-	else:
-	    NOTIFIERS[n]['notifier']=None
+        else:
+            NOTIFIERS[n]['notifier']=None
 
     poller = None
 
@@ -805,7 +818,7 @@ def main(args):
         time.sleep(2)
 
         for n in NOTIFIERS:
-	    if NOTIFIERS[n]['notifier'] is not None:
+            if NOTIFIERS[n]['notifier'] is not None:
                 NOTIFIERS[n]['notifier'].off()
 
 if __name__ == '__main__':
