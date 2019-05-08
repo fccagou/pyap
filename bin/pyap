@@ -1,17 +1,30 @@
 #!/usr/bin/env python
 #
+"""
+Pyap stands for PYthon Alert Processor.
+
+Pyap is a little tools used to process alert sent by differents ways.
+"""
+
+#TODO: continue lint update
+#TODO: use global status in web_status instead of polling
+#TODO: review var names (NOTIFIERS, and notifiers are not the same :( )
+#TODO: remove global vars
+#TODO: assemble NOTIFIERS, POLLERS and notifiers in new pyap/PollerPool class
+
 
 from __future__ import print_function
 
-import sys
 import os
+import ssl
+import sys
+import json
 import time
 import signal
-from threading import Thread
 import wsgiref.simple_server as server
+
+from threading import Thread
 from db9 import Db9
-import json
-import ssl
 
 # -----------------------------------------------------------------
 #  python wrapper
@@ -19,15 +32,17 @@ import ssl
 try:
     # For Python 3.0 and later
     from urllib.request import urlopen
-    myurlopen = lambda url,timeout,context: urlopen(url=url, timeout=timeout, context=context)
+    MYURLOPEN = lambda url, timeout, context: urlopen(url=url, timeout=timeout, context=context)
 except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import urlopen
-    myurlopen = lambda url,timeout,context: urlopen(url=url, timeout=timeout)
+    MYURLOPEN = lambda url, timeout, context: urlopen(url=url, timeout=timeout)
 
-# Because of https://www.python.org/dev/peps/pep-3333/#unicode-issues
-def wsgi_to_bytes(s):
-    return s.encode('iso-8859-1')
+def wsgi_to_bytes(str2convert):
+    """
+    Because of https://www.python.org/dev/peps/pep-3333/#unicode-issues
+    """
+    return str2convert.encode('iso-8859-1')
 
 
 # -----------------------------------------------------------------
@@ -43,24 +58,23 @@ verbose = False
 security_alert_manager = None
 
 # Number of secondes fot autorefresh webstatus.
-web_status_refresh_sec=30
+web_status_refresh_sec = 30
 
-# TODO: assemble NOTIFIERS, POLLERS and notifiers in new pyap/PollerPool class
 
 # Notifiers declared notifiers in conf file or on command line.
 NOTIFIERS = {}
 # POLLERS declared in conf file or on command line
 POLLERS = {}
 # list of instanciated notifier object
-notifiers=[]
-STATUS_LEVEL=['crit','warn','unknown','ok']
+notifiers = []
+STATUS_LEVEL = ['crit', 'warn', 'unknown', 'ok']
 # Document Root for static web pages.
-document_root='/etc/pyap/html'
+document_root = '/etc/pyap/html'
 
 # ssl context for unverified site.
-ssl_default_ctx=None
+ssl_default_ctx = None
 
-ascii_msg_christmas="""
+ascii_msg_christmas = r"""
 .:*~*:._.:*~*:._.:*~*:._.:*~*:._.:*~*:._.:*~*:.
 .     *                                       .
 .    /.\                                      .
@@ -82,28 +96,28 @@ ascii_msg_christmas="""
 def log(msg):
     global verbose
     if verbose:
-        print ("[+] - ",msg)
+        print("[+] - ", msg)
     else:
         pass
 
 def info(msg):
     global verbose
     if verbose:
-        print ("[i] - ",msg)
+        print("[i] - ", msg)
     else:
         pass
 
 def warning(msg):
     global verbose
     if verbose:
-        print ("[!] - ",msg)
+        print("[!] - ", msg)
     else:
         pass
 
 def error(msg):
     global verbose
     if verbose:
-        print ("[-] - ",msg)
+        print("[-] - ", msg)
     else:
         pass
 
@@ -116,17 +130,17 @@ class SecurityAlertManager(object):
 
     def __init__(self, alerts={}):
         super(SecurityAlertManager, self).__init__()
-        self.alerts=alerts
-        self.got_alert=False
-        self.current_priority=50
-        self.current_fct=None
-        self.thread=None
+        self.alerts = alerts
+        self.got_alert = False
+        self.current_priority = 50
+        self.current_fct = None
+        self.thread = None
 
-    def add(self,alert_type, priority=50,alert_fct=None):
+    def add(self, alert_type, priority=50, alert_fct=None):
         if alert_type in self.alerts:
-            self.alerts[alert_type]['count']+=1
+            self.alerts[alert_type]['count'] += 1
         else:
-            self.alerts[alert_type]= {'priority': priority, 'count': 1 , 'fct': alert_fct }
+            self.alerts[alert_type] = {'priority': priority, 'count': 1, 'fct': alert_fct}
 
         info("Add secu alert %s(%d => %s)" % (alert_type, self.alerts[alert_type]['priority'], self.alerts[alert_type]['fct']))
 
@@ -136,9 +150,9 @@ class SecurityAlertManager(object):
             self.restart()
 
 
-    def rm(self,alert_type):
+    def rm(self, alert_type):
         if alert_type in self.alerts and self.alerts[alert_type]['count'] > 0:
-            self.alerts[alert_type]['count']-=1
+            self.alerts[alert_type]['count'] -= 1
 
         info("Rm secu alert %s (%d) (%d => %s)" % (alert_type, self.alerts[alert_type]['count'], self.alerts[alert_type]['priority'], self.alerts[alert_type]['fct']))
         info("Current priority is %d " % self.current_priority)
@@ -147,27 +161,27 @@ class SecurityAlertManager(object):
             self.reload()
 
     def reload(self):
-        self.current_priority=500
-        nb=0
+        self.current_priority = 500
+        nb = 0
         info("Current priority set to %d " % self.current_priority)
         for k in self.alerts.keys():
-            nb=+self.alerts[k]['count']
+            nb += self.alerts[k]['count']
             if self.alerts[k]['count'] > 0 and self.alerts[k]['priority'] < self.current_priority:
                 info("Change secu alert to %s (%d) (%d => %s)" % (k, self.alerts[k]['count'], self.alerts[k]['priority'], self.alerts[k]['fct']))
-                self.current_priority=self.alerts[k]['priority']
-                self.current_fct=self.alerts[k]['fct']
+                self.current_priority = self.alerts[k]['priority']
+                self.current_fct = self.alerts[k]['fct']
         if nb > 0:
-           self.restart()
+            self.restart()
         else:
-           self.got_alert = False
-           if self.thread is not None:
+            self.got_alert = False
+            if self.thread is not None:
                 while self.thread.is_alive():
                     time.sleep(1)
-                self.thread=None
+                self.thread = None
 
-    def reset(self,alert_type):
+    def reset(self, alert_type):
         if alert_type in self.alerts and self.alerts[alert_type]['count'] > 0:
-            self.alerts[alert_type]['count']=0
+            self.alerts[alert_type]['count'] = 0
 
     def restart(self):
         info("Restarting AlertSecuManager")
@@ -179,7 +193,7 @@ class SecurityAlertManager(object):
 
         info("Running new alert function %s " % self.current_fct)
         self.got_alert = True
-        self.thread=Thread(target=self.current_fct, args=(0.6, lambda: self.got_alert))
+        self.thread = Thread(target=self.current_fct, args=(0.6, lambda: self.got_alert))
         self.thread.start()
 
 
@@ -198,7 +212,7 @@ def am_blink(speed, again):
 
     # Get only active notifiers.
 
-    active_notifiers=[]
+    active_notifiers = []
     for n in NOTIFIERS:
         if NOTIFIERS[n]['notifier'] is not None:
             active_notifiers.append(NOTIFIERS[n]['notifier'])
@@ -214,10 +228,10 @@ def am_blink(speed, again):
         except:
             error("error while getting status %s " % (sys.exc_info()[0]))
             import traceback
-            warning ("error: %s " %  sys.exc_info()[0])
-            print ('~'*60)
+            warning("error: %s " %  sys.exc_info()[0])
+            print('~'*60)
             traceback.print_exc(file=sys.stdout)
-            print ('~'*60)
+            print('~'*60)
 
 
 def am_christmas(speed, again):
@@ -227,39 +241,39 @@ def am_christmas(speed, again):
     # Get only active notifiers.
     from pyap.blink1_notifier import Blink1Notifier
     import random
-    active_notifiers=[]
+    active_notifiers = []
     for n in NOTIFIERS:
-        if NOTIFIERS[n]['notifier'] is not None and type (NOTIFIERS[n]['notifier']) == Blink1Notifier:
+        if NOTIFIERS[n]['notifier'] is not None and type(NOTIFIERS[n]['notifier']) == Blink1Notifier:
             active_notifiers.append(NOTIFIERS[n]['notifier'])
 
     while again():
         try:
-            for i in range(1,random.randint(2,10)):
-               for n in active_notifiers:
-                    n.blink1.fade_to_rgbn(0,0,0,0,n.led)
+            for i in range(1, random.randint(2, 10)):
+                for n in active_notifiers:
+                    n.blink1.fade_to_rgbn(0, 0, 0, 0, n.led)
                     time.sleep(random.random())
                     n.blink1.fade_to_rgbn(n.fade_millis
-                        ,random.randint(0,100)
-                        ,random.randint(0,100)
-                        ,random.randint(0,100)
-                        ,n.led)
+                                          , random.randint(0, 100)
+                                          , random.randint(0, 100)
+                                          , random.randint(0, 100)
+                                          , n.led)
             for n in active_notifiers:
-               getattr(n,n.state)()
+                getattr(n, n.state)()
             time.sleep(2.0)
 
         except:
             error("error while getting status %s " % (sys.exc_info()[0]))
             import traceback
-            warning ("error: %s " %  sys.exc_info()[0])
-            print ('~'*60)
+            warning("error: %s " %  sys.exc_info()[0])
+            print('~'*60)
             traceback.print_exc(file=sys.stdout)
-            print ('~'*60)
+            print('~'*60)
 
 
 # -----------------------------------------------------------------
 # Poller status management.
 # -----------------------------------------------------------------
-def poller_get_status(notifiers,pollers,stop):
+def poller_get_status(notifiers, pollers, stop):
     global blinks_states
     global STATUS_LEVEL
     global security_alert_manager
@@ -270,16 +284,16 @@ def poller_get_status(notifiers,pollers,stop):
         # get {"services":{ "ok":123, "warn":1, "crit":0, "unknown":0}}
         try:
             # global status by notifier.
-            status_by_notifier={}
+            status_by_notifier = {}
 
             for p in pollers:
                 try:
-                    u=pollers[p]['url']
-                    info ("[+] Get status from %s" % u )
+                    u = pollers[p]['url']
+                    info("[+] Get status from %s" % u)
                     try:
-                        poller_response = myurlopen(u,timeout=2,context=ssl_default_ctx).read()
+                        poller_response = MYURLOPEN(u, timeout=2, context=ssl_default_ctx).read()
                     except:
-                        warning ("error: opening %s " %  u )
+                        warning("error: opening %s " %  u)
                         poller_response = '{"services":{ "ok":0, "warn":0, "crit":0, "unknown":1}}'
 
                     info("poller status ( %s )" % poller_response.rstrip())
@@ -294,44 +308,44 @@ def poller_get_status(notifiers,pollers,stop):
                         for k in poller_status['services'].keys():
                             # Allow dynamiq status.
                             if k not in status_by_notifier[notifier_name]:
-                                status_by_notifier[notifier_name][k]=0
+                                status_by_notifier[notifier_name][k] = 0
                             status_by_notifier[notifier_name][k] += int(poller_status['services'][k])
 
                 except:
                     error("error while getting status %s " % (sys.exc_info()[0]))
                     import traceback
-                    warning ("error: %s " %  sys.exc_info()[0])
-                    print ('.'*60)
+                    warning("error: %s " %  sys.exc_info()[0])
+                    print('.'*60)
                     traceback.print_exc(file=sys.stdout)
-                    print ('.'*60)
+                    print('.'*60)
 
-            poller_security={}
+            poller_security = {}
 
             for k in status_by_notifier.keys():
 
                 for at in security_alert_manager.alerts.keys():
                     if at in status_by_notifier[k]:
                         if at not in poller_security:
-                            poller_security[at]=0
+                            poller_security[at] = 0
 
-                        poller_security[at]+=status_by_notifier[k][at]
+                        poller_security[at] += status_by_notifier[k][at]
 
 
                 if status_by_notifier[k]['crit'] > 0:
-                    current_status='critical'
+                    current_status = 'critical'
 
                 elif status_by_notifier[k]['warn'] > 0:
-                    current_status='warning'
+                    current_status = 'warning'
 
                 elif status_by_notifier[k]['unknown'] > 0:
-                    current_status='unknown'
+                    current_status = 'unknown'
 
                 elif status_by_notifier[k]['ok'] > 0:
-                    current_status='ok'
+                    current_status = 'ok'
 
                 else:
                     error("json error")
-                    current_status='unknown'
+                    current_status = 'unknown'
 
                 if notifiers[k]['notifier'] is None:
                     # FIXME: should be checked at prg start
@@ -340,7 +354,7 @@ def poller_get_status(notifiers,pollers,stop):
                     if security_alert_manager.got_alert:
                         # FIME: UGLY because of blinking implementation Have to implement notifier.blink()
                         info("[-] - Notifier %s status ( %s )" % (k, current_status))
-                        notifiers[k]['notifier'].state=current_status
+                        notifiers[k]['notifier'].state = current_status
                     else:
                         info("[-] - Notifier %s status ( %s )" % (k, current_status))
                         notifiers[k]['notifier'].set_state(current_status)
@@ -356,10 +370,10 @@ def poller_get_status(notifiers,pollers,stop):
         except:
             error("error while getting status %s " % (sys.exc_info()[0]))
             import traceback
-            warning ("error: %s " %  sys.exc_info()[0])
-            print ('#'*60)
+            warning("error: %s " %  sys.exc_info()[0])
+            print('#'*60)
             traceback.print_exc(file=sys.stdout)
-            print ('#'*60)
+            print('#'*60)
 
         time.sleep(10)
 
@@ -375,7 +389,7 @@ def switch_on_alert(start_response, alert_status):
     global NOTIFIERS
     global security_alert_manager
 
-    if not security_alert_manager.got_alert :
+    if not security_alert_manager.got_alert:
         for n in NOTIFIERS:
             if NOTIFIERS[n]['notifier'] is not None:
                 an = NOTIFIERS[n]['notifier']
@@ -427,7 +441,7 @@ def alert_custom(start_response, alert_msg):
 def alert_security(start_response):
     global security_alert_manager
     security_alert_manager.add('api_security')
-    return alert_custom(start_response, 'Security Alert !' )
+    return alert_custom(start_response, 'Security Alert !')
 
 def alert_security_ack(start_response):
     global security_alert_manager
@@ -460,7 +474,7 @@ def web_status(start_response):
     global ssl_default_ctx
 
     status = "200 OK"
-    output="""<!DOCTYPE html>
+    output = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -471,16 +485,16 @@ def web_status(start_response):
     <meta name="description" content="Get POLLERS status">
     <meta name="robots" content="all">
     <style>
-    body { background: #252830; box-sizing: border-box; }
+    body { background: #252830; box-sizing: border-box;}
     .crit {color: white; background: #e64759; border-radius: 3px}
     .warn {color: #ff4400; background: #e4d836; border-radius: 3px}
     .unknown {color: black; background: #aa00aa; border-radius: 3px}
     .ok {color: black; background: #1bc98e; border-radius: 3px}
     .security {color: white; background: #ff0000; border-radius: 3px}
     .error {color: red; background: #aaaaaa; border-radius: 3px}
-    .nb  {padding: 5px }
-    .alz {padding: 10px !important }
-    .desc {padding: 10px !important }
+    .nb  {padding: 5px}
+    .alz {padding: 10px !important}
+    .desc {padding: 10px !important}
     .anj {font-weight: bold; font-size: 85%;
         letter-spacing: .15em;
         text-transform: uppercase;
@@ -498,47 +512,47 @@ def web_status(start_response):
     """
     try:
         if security_alert_manager.got_alert:
-            output+="""<div class="gq gg ala"><div class="security"><div class="alz"><span class="anj">Security ALERT</span></div><p> /!\ </p></div></div>"""
+            output += r"""<div class="gq gg ala"><div class="security"><div class="alz"><span class="anj">Security ALERT</span></div><p> /!\ </p></div></div>"""
 
         for p in POLLERS:
             try:
 
                 try:
-                    detail_url="""<a href="%s">more detail</a>""" % POLLERS[p]['detail_url']
+                    detail_url = """<a href="%s">more detail</a>""" % POLLERS[p]['detail_url']
                 except:
-                    detail_url=" "
+                    detail_url = " "
 
                 try:
-                    poller_response = myurlopen(POLLERS[p]['url'],timeout=2,context=ssl_default_ctx).read()
+                    poller_response = MYURLOPEN(POLLERS[p]['url'], timeout=2, context=ssl_default_ctx).read()
                 except:
-                    warning ("error: opening %s " %  u )
+                    warning("error: opening %s " %  u)
                     poller_response = '{"services":{ "ok":0, "warn":0, "crit":0, "unknown":1}}'
 
                 poller_status = json.loads(poller_response)
                 log(poller_status)
-                cssclass='ok'
+                cssclass = 'ok'
                 if poller_status['services']['crit'] > 0:
-                    cssclass='crit'
+                    cssclass = 'crit'
                 elif  poller_status['services']['warn'] > 0:
-                    cssclass='warn'
+                    cssclass = 'warn'
                 elif  poller_status['services']['unknown'] > 0:
-                    cssclass='unknown'
+                    cssclass = 'unknown'
 
-                output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p><span class="ok nb">%s</span><span class="warn nb">%s</span><span class="crit nb">%s</span><span class="unknown nb">%s</span></p></div></div></div>""" % (cssclass,p,detail_url,poller_status['services']['ok'],poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
+                output += """<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p><span class="ok nb">%s</span><span class="warn nb">%s</span><span class="crit nb">%s</span><span class="unknown nb">%s</span></p></div></div></div>""" % (cssclass, p, detail_url, poller_status['services']['ok'], poller_status['services']['warn'], poller_status['services']['crit'], poller_status['services']['unknown'])
 
             except:
-                cssclass='error'
-                output+="""<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p>Monitoring server seems DOWN.</p></div></div></div>""" % (cssclass,p,detail_url)
+                cssclass = 'error'
+                output += """<div class="gq gg ala"><div class="%s"><div class="alz"><span class="anj"> %s</span></div><div class="desc"><p>%s</p><p>Monitoring server seems DOWN.</p></div></div></div>""" % (cssclass, p, detail_url)
 
         output += """</div><script>setInterval(function () { location.reload() }, %s000);</script></body></html>""" % (web_status_refresh_sec)
     except:
-        status="500 INTERNAL ERROR"
+        status = "500 INTERNAL ERROR"
         import traceback
-        warning ("INTERNAL ERROR: %s " %  sys.exc_info()[0])
-        print ('-'*60)
+        warning("INTERNAL ERROR: %s " %  sys.exc_info()[0])
+        print('-'*60)
         traceback.print_exc(file=sys.stdout)
-        print ('-'*60)
-        output="The code seems to have an internal error :("
+        print('-'*60)
+        output = "The code seems to have an internal error :("
 
     response_headers = [('Content-type', 'text/html; charset=UTF-8'),
                         ('Content-Length', str(len(output)))]
@@ -548,14 +562,14 @@ def web_status(start_response):
 
 def web_page(start_response, path_info):
     global document_root
-    filename="%s%s" % (document_root, path_info)
+    filename = "%s%s" % (document_root, path_info)
     # Sanitize
-    filename=filename.replace('../','').replace('./','')
+    filename = filename.replace('../', '').replace('./', '')
     try:
-        output=open(filename, 'r').read()
+        output = open(filename, 'r').read()
         status = "200 OK"
     except:
-        output="Page not found %s" % path_info
+        output = "Page not found %s" % path_info
         status = "404 NOT FOUND"
 
     response_headers = [('Content-type', 'text/plain; charset=UTF-8'),
@@ -608,11 +622,11 @@ def pyap_application(environ, start_response):
 # -----------------------------------------------------------------
 def EndException(BaseException):
     def __init__(self, value):
-        self.value=value
+        self.value = value
     def __str__(self):
         return repr(self.value)
 
-def end_process(signum,frame):
+def end_process(signum, frame):
     raise EndException('Signal catch')
 
 
@@ -635,7 +649,7 @@ def main(args):
     signal.signal(signal.SIGQUIT, end_process)
 
     if debug:
-        log ("args list: %s " %  args)
+        log("args list: %s " %  args)
 
     # Get configuration from file.
     if args.conf is not None:
@@ -661,25 +675,25 @@ def main(args):
         ssl_default_ctx = ssl._create_unverified_context()
 
     if 'ALERTMANAGERS' in conf:
-        ALERTMANAGERS=conf['ALERTMANAGERS']
+        ALERTMANAGERS = conf['ALERTMANAGERS']
     else:
-        ALERTMANAGERS={}
+        ALERTMANAGERS = {}
 
     for k in ALERTMANAGERS.keys():
         ALERTMANAGERS[k]['count'] = 0
         ALERTMANAGERS[k]['fct'] = globals()[ALERTMANAGERS[k]['fct']]
 
     if 'api_security' not in ALERTMANAGERS:
-        ALERTMANAGERS['api_security'] = {'priority':1, 'fct': am_blink, 'count': 0 }
+        ALERTMANAGERS['api_security'] = {'priority':1, 'fct': am_blink, 'count': 0}
 
     if 'api_christmas' not in ALERTMANAGERS:
-        ALERTMANAGERS['api_christmas'] = {'priority':11, 'fct': am_christmas, 'count': 0 }
+        ALERTMANAGERS['api_christmas'] = {'priority':11, 'fct': am_christmas, 'count': 0}
 
     if debug:
-        log ("document_root: %s" % document_root)
-        log ("NOTIFIERS: %s" % NOTIFIERS)
-        log ("POLLERS: %s" % POLLERS)
-        log ("ALERTMANAGERS: %s" % ALERTMANAGERS)
+        log("document_root: %s" % document_root)
+        log("NOTIFIERS: %s" % NOTIFIERS)
+        log("POLLERS: %s" % POLLERS)
+        log("ALERTMANAGERS: %s" % ALERTMANAGERS)
 
     security_alert_manager = SecurityAlertManager(ALERTMANAGERS)
 
@@ -705,18 +719,18 @@ def main(args):
 
     # Add Urls from parameters creating pollers
     # url form :   [poller_name[,notifier_name]=]url
-    for i in range (0, len(args.urls)):
+    for i in range(0, len(args.urls)):
         try:
-            (poller_name,url)=args.urls[i].split('=')
+            (poller_name, url) = args.urls[i].split('=')
             try:
-                (poller_name,notifier_name) = poller_name.split(',')
+                (poller_name, notifier_name) = poller_name.split(',')
                 if not notifier_name in NOTIFIERS.keys():
                     notifier_name = None
             except:
-                notifier_name=None
+                notifier_name = None
 
         except:
-            poller_name="poller_arg_%d" % i
+            poller_name = "poller_arg_%d" % i
             url = args.urls[i]
 
         POLLERS[poller_name] = {}
@@ -738,23 +752,23 @@ def main(args):
 
                 from pyap.blink1_notifier import Blink1Notifier
                 NOTIFIERS[n]['notifier'] = Blink1Notifier(
-                        led = NOTIFIERS[n]['led'],
-                        state = NOTIFIERS[n]['default_status'],
-                        ok_color = NOTIFIERS[n]['status']['ok'],
-                        warn_color = NOTIFIERS[n]['status']['warn'],
-                        crit_color = NOTIFIERS[n]['status']['crit'],
-                        )
+                    led=NOTIFIERS[n]['led'],
+                    state=NOTIFIERS[n]['default_status'],
+                    ok_color=NOTIFIERS[n]['status']['ok'],
+                    warn_color=NOTIFIERS[n]['status']['warn'],
+                    crit_color=NOTIFIERS[n]['status']['crit'],
+                    )
                 log("Blink(1) found")
 
             except:
-                NOTIFIERS[n]['notifier']=None
-                warning ("Blink(1) not found")
+                NOTIFIERS[n]['notifier'] = None
+                warning("Blink(1) not found")
                 if debug:
                     import traceback
-                    warning ("Blink1 error: %s " %  sys.exc_info()[0])
-                    print ('-'*60)
+                    warning("Blink1 error: %s " %  sys.exc_info()[0])
+                    print('-'*60)
                     traceback.print_exc(file=sys.stdout)
-                    print ('-'*60)
+                    print('-'*60)
                     warning('No Blink(1) code. Look at get-blink1.sh')
 
 
@@ -763,27 +777,27 @@ def main(args):
             try:
                 from pyap.serial_led_notifier import SerialLedNotifier
                 NOTIFIERS[n]['notifier'] = SerialLedNotifier(
-                        NOTIFIERS[n]['tty'],
-                        state=NOTIFIERS[n]['default_status'],
-                        )
+                    NOTIFIERS[n]['tty'],
+                    state=NOTIFIERS[n]['default_status'],
+                    )
                 log("serial_led found")
 
             except:
-                NOTIFIERS[n]['notifier']=None
+                NOTIFIERS[n]['notifier'] = None
                 warning("serial_led not found")
-                serial_led=None
+                serial_led = None
                 if debug:
                     import traceback
-                    warning ("SerialLed error: %s " %  sys.exc_info()[0])
-                    print ('-'*60)
+                    warning("SerialLed error: %s " %  sys.exc_info()[0])
+                    print('-'*60)
                     traceback.print_exc(file=sys.stdout)
-                    print ('-'*60)
+                    print('-'*60)
         else:
-            NOTIFIERS[n]['notifier']=None
+            NOTIFIERS[n]['notifier'] = None
 
     poller = None
 
-    stop_thread=False
+    stop_thread = False
     try:
         if args.server:
             # If local status server is run, the polling process
@@ -791,9 +805,9 @@ def main(args):
             if len(POLLERS):
                 log("Running http poller")
                 poller = Thread(
-                        target=poller_get_status,
-                        args=(NOTIFIERS, POLLERS,lambda: stop_thread)
-                        )
+                    target=poller_get_status,
+                    args=(NOTIFIERS, POLLERS, lambda: stop_thread)
+                    )
                 poller.start()
 
             port = args.port
@@ -805,17 +819,17 @@ def main(args):
             if len(POLLERS):
                 poller_get_status(NOTIFIERS, POLLERS, lambda: stop_thread)
             else:
-                print ("[+] Nothing to poll or to serve... I leave ...")
+                print("[+] Nothing to poll or to serve... I leave ...")
     except KeyboardInterrupt:
         log('End asked by user...bye bye !')
     except EndException as ee:
         log(ee.value)
     except:
-        print ("Unexpected error:", sys.exc_info()[0])
+        print("Unexpected error:", sys.exc_info()[0])
     finally:
         # Ending all process and switch notifiers off before leaving.
-        stop_thread=True
-        security_alert_manager.got_alert=False
+        stop_thread = True
+        security_alert_manager.got_alert = False
 
         log("Waiting end of process")
         time.sleep(2)
@@ -847,7 +861,7 @@ if __name__ == '__main__':
                         help='Configuration file.')
     parser.add_argument('--notifiers', '-n',
                         help='Notifiers list in Blink1Notifier,SerialLedNotifier')
-    parser.add_argument('--server','-s', action='store_true',
+    parser.add_argument('--server', '-s', action='store_true',
                         help="Run http listening server (default=false)")
     parser.add_argument('--port', '-p', default=LISTENING_PORT, type=int,
                         help='Listening port for status push .')
@@ -901,11 +915,9 @@ if __name__ == '__main__':
         with open(args.pidfile, 'w') as f:
             f.write(str(os.getpid()))
 
-    main (args)
+    main(args)
 
     if not args.nopid:
         os.remove(args.pidfile)
 
     os._exit(os.EX_OK)
-
-

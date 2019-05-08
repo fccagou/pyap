@@ -12,14 +12,14 @@ try:
     from blink1_pyusb import Blink1 as Blink1_pyusb
     use_pyusb = True
     #sys.modules['Blink1'] = blink1_pyusb
-    if debugimport: print "using blink1_pyusb"
+    if debugimport: print("using blink1_pyusb")
 except ImportError:
     try:
         from blink1_ctypes import Blink1 as Blink1_ctypes
         #sys.modules['Blink1'] = blink1_ctypes
-        if debugimport: print "using blink1_ctypes"
+        if debugimport: print("using blink1_ctypes")
     except ImportError:
-        print "couldn't load blink1_pyusb or blink1_ctypes"
+        print("couldn't load blink1_pyusb or blink1_ctypes")
         sys.exit(1)
 
 
@@ -54,7 +54,7 @@ class Blink1:
         try :
             return getattr(self._wrapped_obj, attr)
         except Exception:
-            print "****** error!"
+            print("****** error!")
             return None
 
 # FIXME: can't overload methods?
@@ -107,10 +107,10 @@ class Blink1Pattern:
         '''
         parse color patterns in the format: '3, #ff00ff, 1.5 ,#000000, 1.0'
         '''
-        print "parse_pattern_string:"+pattstr
+        print("parse_pattern_string:"+pattstr)
         vals = pattstr.split(',')
         if( len(vals) % 2 == 0 ) : # even is bad, must be odd
-            print "bad patternstr: "+pattstr
+            print("bad patternstr: "+pattstr)
         else:
             patt = Blink1Pattern()
             patt.repeats = int(vals[0]) #
@@ -124,7 +124,7 @@ class Blink1Pattern:
 def demo(blink1):
     '''
     '''
-    print "blink1 version: "+ blink1.get_version()
+    print("blink1 version: "+ blink1.get_version())
 
     democolors = [ (255,  0,  0),  # red
                    (  0,255,  0),  # grn
@@ -140,7 +140,7 @@ def demo(blink1):
     for rgb in democolors:
         (r,g,b) = rgb
 
-        print "fading to %3i,%3i,%3i" % (r,g,b)
+        print("fading to %3i,%3i,%3i" % (r,g,b))
         blink1.fade_to_rgbn( demo_millis/2, r,g,b, 0 )
         time.sleep( demo_millis/1000.0 )
         blink1.fade_to_rgbn( demo_millis/2, 0,0,0, 0 )
@@ -233,26 +233,26 @@ def main():
 
     elif options.patt :
         blink1patt = Blink1Pattern.parse_pattern_string(options.patt)
-        print "playing pattern: "+ str(blink1patt)
+        print("playing pattern: "+ str(blink1patt))
         for i in range(blink1patt.repeats):
             for j in range(len(blink1patt.colors)):
                 color = blink1patt.colors[j]
                 millis = int( blink1patt.times[j] * 1000 )
-                print "color: "+str(color) +", millis: "+ str(millis)
+                print("color: "+str(color) +", millis: "+ str(millis))
                 blink1.fade_to_rgb( millis/2, color[0], color[1], color[2])
                 time.sleep( millis / 1000.0 )
 
     elif options.cmd == 'version':
-        print "version: "+ blink1.get_version()
+        print("version: "+ blink1.get_version())
 
     elif options.cmd == 'hostid':
-        print "hostid: "+ blink1.get_hostid()
+        print("hostid: "+ blink1.get_hostid())
 
     elif options.cmd == 'demo' :
         demo(blink1)
 
     elif options.cmd == None and rgb :
-        print "fading to #%02x%02x%02x" % (rgb) + " in %d msec" % fade_millis
+        print("fading to #%02x%02x%02x" % (rgb) + " in %d msec" % fade_millis)
         blink1.fade_to_rgbn( fade_millis, rgb[0],rgb[1],rgb[2], ledn)
 
     else:
