@@ -338,13 +338,17 @@ def poller_get_status(notifiers,pollers,stop):
                     error("json error")
                     current_status='unknown'
 
-                if security_alert_manager.got_alert:
-                    # FIME: UGLY because of blinking implementation Have to implement notifier.blink()
-                    info("[-] - Notifier %s status ( %s )" % (k, current_status))
-                    notifiers[k]['notifier'].state=current_status
+                if notifiers[k]['notifier'] is None:
+                    # FIXME: should be checked at prg start
+                    info("[-] - Notifier %s not present. See conf file or hardware" % k)
                 else:
-                    info("[-] - Notifier %s status ( %s )" % (k, current_status))
-                    notifiers[k]['notifier'].set_state(current_status)
+                    if security_alert_manager.got_alert:
+                        # FIME: UGLY because of blinking implementation Have to implement notifier.blink()
+                        info("[-] - Notifier %s status ( %s )" % (k, current_status))
+                        notifiers[k]['notifier'].state=current_status
+                    else:
+                        info("[-] - Notifier %s status ( %s )" % (k, current_status))
+                        notifiers[k]['notifier'].set_state(current_status)
 
             for k in poller_security.keys():
                 if poller_security[k] > 0:
