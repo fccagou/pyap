@@ -25,6 +25,9 @@ except ImportError:
     from urllib2 import urlopen
     myurlopen = lambda url,timeout,context: urlopen(url=url, timeout=timeout)
 
+# Because of https://www.python.org/dev/peps/pep-3333/#unicode-issues
+def wsgi_to_bytes(s):
+    return s.encode('iso-8859-1')
 
 
 # -----------------------------------------------------------------
@@ -386,7 +389,7 @@ def switch_on_alert(start_response, alert_status):
     response_headers = [('Content-type', 'text/plain'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
-    return [output]
+    return [wsgi_to_bytes(output)]
 
 
 def notfound(start_response, url):
@@ -396,7 +399,7 @@ def notfound(start_response, url):
     response_headers = [('Content-type', 'text/plain'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
-    return [output]
+    return [wsgi_to_bytes(output)]
 
 
 def alert_critical(start_response):
@@ -417,7 +420,7 @@ def alert_custom(start_response, alert_msg):
     response_headers = [('Content-type', 'text/plain'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
-    return [output]
+    return [wsgi_to_bytes(output)]
 
 
 
@@ -537,12 +540,10 @@ def web_status(start_response):
         print ('-'*60)
         output="The code seems to have an internal error :("
 
-    log(type(output))
-
     response_headers = [('Content-type', 'text/html; charset=UTF-8'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
-    return [str(output)]
+    return [wsgi_to_bytes(output)]
 
 
 def web_page(start_response, path_info):
@@ -560,7 +561,7 @@ def web_page(start_response, path_info):
     response_headers = [('Content-type', 'text/plain; charset=UTF-8'),
                         ('Content-Length', str(len(output)))]
     start_response(status, response_headers)
-    return [str(output)]
+    return [wsgi_to_bytes(output)]
 
 # -----------------------------------------------------------------
 # HTTP: WEB APP
