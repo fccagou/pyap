@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PYAP. If not, see <http://www.gnu.org/licenses/>.
 
-requires="--requires=python3-pyusb,libusb"
+requires="--requires=python3-pyusb,libusb,libusbx"
 setupfilename=setup-el.py
 
 RELEASE=1
