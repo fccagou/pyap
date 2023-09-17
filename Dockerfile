@@ -6,11 +6,7 @@ LABEL fr.fccagouu.vendor="The Cagou Corp."
 LABEL org.opencontainers.image.authors="fccagou <fccagou@gmail.com>"
 
 RUN dnf install -y \
-      python3 \
-	  python3-pyusb \
-	  libusb \
 	  rpm-build \
-	  git \
     && dnf clean all \
 	&& rm -rf /var/cache/dnf
 
