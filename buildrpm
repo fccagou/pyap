@@ -17,19 +17,23 @@
 # along with PYAP. If not, see <http://www.gnu.org/licenses/>.
 
 RELEASE=1
-DISTRIB=${DISTRIB:=el$(sed 's/.* \([0-9\.]\+\) .*/\1/g' /etc/redhat-release | cut -d\. -f1)}
-VERSION=$(grep 'version=' setup-${DISTRIB}.py | sed "s#.* version='## ; s#'.*##")
+DISTRIB="${DISTRIB:=el$(sed 's/.* \([0-9\.]\+\) .*/\1/g' /etc/redhat-release | cut -d\. -f1)}"
 
-case ${DISTRIB} in
+case "$DISTRIB" in
 	el6)
 		requires="--requires=libusb1"
+		setupfilename=setup-"$DISTRIB".py
 		;;
 	el*)
-		requires="--requires=pyusb,libusb"
+		requires="--requires=python3-pyusb,libusb"
+		setupfilename=setup-el.py
+		;;
 esac
 
-cd ${0%\/*}
+VERSION="$(grep 'version=' "$setupfilename" | sed "s#.* version='## ; s#'.*##")"
 
-python3 setup-${DISTRIB}.py -v bdist_rpm --release=$RELEASE --distribution-name=$DISTRIB --obsoletes=pynotif ${requires}
+cd "${0%\/*}"
 
-mv dist/pyap-$VERSION-$RELEASE.noarch.rpm dist/pyap-$VERSION-$RELEASE-$DISTRIB.noarch.rpm
+python3  "$setupfilename" -v bdist_rpm --release="$RELEASE" --distribution-name="$DISTRIB" --obsoletes=pynotif ${requires}
+
+mv dist/pyap-"$VERSION"-"$RELEASE".noarch.rpm dist/pyap-"$VERSION"-"$RELEASE"-"$DISTRIB".noarch.rpm
