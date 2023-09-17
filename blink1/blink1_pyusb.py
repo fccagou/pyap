@@ -72,7 +72,7 @@ class Blink1:
         Send USB Feature Report 0x01 to blink(1) with 8-byte payload
         Note: arg 'buf' must be 8 bytes or bad things happen
         """
-        if debug_rw : print "blink1write:"+",".join('0x%02x' % v for v in buf)
+        if debug_rw : print ("blink1write: %s", ",".join('0x%02x' % v for v in buf))
         if( self.dev == None ): return self.notfound()
         bmRequestTypeOut = usb.util.build_request_type(usb.util.CTRL_OUT, usb.util.CTRL_TYPE_CLASS, usb.util.CTRL_RECIPIENT_INTERFACE)
         self.dev.ctrl_transfer( bmRequestTypeOut,
@@ -93,7 +93,7 @@ class Blink1:
                                       (3 << 8) | report_id,
                                       0,
                                       8 )    # == number of bytes to read
-        if debug_rw : print "blink1read: "+",".join('0x%02x' % v for v in buf)
+        if debug_rw : print ("blink1read: %s", ",".join('0x%02x' % v for v in buf))
         return buf
 
     def fade_to_rgbn(self, fadeMillis, red,green,blue, ledn):
@@ -103,8 +103,8 @@ class Blink1:
         """
         action = ord('c')
         fadeMillis = fadeMillis/10
-        th = (fadeMillis & 0xff00) >> 8
-        tl = fadeMillis & 0x00ff
+        th = (int(fadeMillis) & 0xff00) >> 8
+        tl = int(fadeMillis) & 0x00ff
         buf = [report_id, action, red,green,blue, th,tl, ledn]
         return self.write(buf)
 

@@ -9,7 +9,7 @@ import uuid
 debugimport=False
 use_pyusb=False
 try:
-    from blink1_pyusb import Blink1 as Blink1_pyusb
+    from blink1.blink1_pyusb import Blink1 as Blink1_pyusb
     use_pyusb = True
     #sys.modules['Blink1'] = blink1_pyusb
     if debugimport: print("using blink1_pyusb")
@@ -78,7 +78,7 @@ class Blink1:
         # match hex color code "#FFcc00"
         m = re.search(r"#([0-9a-f]{6})", rgbstr)
         if m:
-            rgb = tuple(ord(c) for c in m.group(1).decode('hex'))
+            rgb = tuple(c for c in bytes.fromhex(m.group(1)))
         else:
             # match color triplets like "255,0,0" and "0xff,0xcc,0x33"
             m = re.search(r"(0x[\da-f]+|\d+),(0x[\da-f]+|\d+),(0x[\da-f]+|\d+)",

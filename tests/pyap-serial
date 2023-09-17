@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #
 # Used to control serial electric I/O to send notification by serial port
@@ -23,16 +23,16 @@ ORANGE_LED = GREEN_LED | RED_LED
 
 def usage():
 
-    print "usage: %s <tty>\n\n" % sys.argv[0].split('/')[-1]
+    print ("usage: %s <tty>\n\n", sys.argv[0].split('/')[-1])
 
 
 def switchon(pin, all_state):
-    print "[+] - switch on pin %s" % pin
+    print (f"[+] - switch on pin {pin}")
     return all_state | pin
 
 
 def switchoff(pin, all_state):
-    print "[+] - switch off pin %s" % pin
+    print (f"[+] - switch off pin {pin}")
     return all_state & ~pin
 
 
@@ -40,7 +40,7 @@ def main(tty):
     out = Db9(tty)
     out.connect()
 
-    print "[+] - Checking leds"
+    print ("[+] - Checking leds")
     out.switch_off(Db9.ALL_OUTPUT)
 
     for i in xrange(6):
@@ -62,33 +62,33 @@ def main(tty):
 
     time.sleep(1)
 
-    print "[+] - set all entries down"
+    print ("[+] - set all entries down")
     out.switch_off(Db9.ALL_OUTPUT)
-    print "[+] - is GREEN_LED on ?"
+    print ("[+] - is GREEN_LED on ?")
     if out.is_on(GREEN_LED):
-        print '   [!] - yes ??? GREEN_LED should be off !'
+        print ("   [!] - yes ??? GREEN_LED should be off !")
     else:
-        print '   [+] - no ... OK, that\'s fine'
+        print ("   [+] - no ... OK, that's fine")
 
-    print "[+] - sleeping during 5 sec"
+    print ("[+] - sleeping during 5 sec")
     time.sleep(5)
-    print "[+] - switch on GREEN_LED"
+    print ("[+] - switch on GREEN_LED")
     out.switch_on(GREEN_LED)
-    print "[+] - is GREEN_LED really on ?"
+    print ("[+] - is GREEN_LED really on ?")
     if out.is_on(GREEN_LED):
-        print '   [+] - yes ... OK, that\'s fine'
+        print ("   [+] - yes ... OK, that's fine")
     else:
-        print '   [!] - no ??? GREEN_LED should be on !'
-    print "[+] - sleeping during 5 sec"
+        print ("   [!] - no ??? GREEN_LED should be on !")
+    print ("[+] - sleeping during 5 sec")
     time.sleep(5)
-    print "[+] - set orange led"
+    print ("[+] - set orange led")
     out.switch_on(ORANGE_LED)
-    print "[+] - sleeping during 5 sec"
+    print ("[+] - sleeping during 5 sec")
     time.sleep(5)
-    print "[+] - set red led"
+    print ("[+] - set red led")
     out.switch_off(GREEN_LED)
     out.switch_on(RED_LED)
-    print "[+] - sleeping during 5 sec"
+    print ("[+] - sleeping during 5 sec")
     time.sleep(5)
 
     out.disconnect()
