@@ -5,7 +5,20 @@ Pyap is a little tools used to process alert sent by differents ways.
 _Previously named pynotif, I need to rename it because of conflicted
 naming with python-notify from libnotify._
 
-## History
+
+1. [History](# history)
+2. [Serial Db9](#serial-db9)
+3. [pyap](#pyap)
+4. [http poller](#http-poller)
+5. [Nagios/Shinken http poller](#nagios/shinken-http-poller)
+6. [blink(1)](#blink(1))
+7. [Container](#container)
+8. [TODO](#todo)
+9. [Changelog](#changelog)
+   * [[v0.6.0] - 2023-09-17](#[v0.6.0]---2023-09-17)
+
+
+## History
 
 I would like to get physical notifications to be informed when a new event
 occurs on my computer.
