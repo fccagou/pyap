@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # This file is part of PYAP
-# Copyright 2016-2017 fccagou <fccagou@gmail.com>
+# Copyright 2016-2023 fccagou <fccagou@gmail.com>
 #
 # PYAP is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -16,20 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with PYAP. If not, see <http://www.gnu.org/licenses/>.
 
+requires="--requires=python3-pyusb,libusb"
+setupfilename=setup-el.py
+
 RELEASE=1
 DISTRIB="${DISTRIB:=el$(sed 's/.* \([0-9\.]\+\) .*/\1/g' /etc/redhat-release | cut -d\. -f1)}"
-
-case "$DISTRIB" in
-	el6)
-		requires="--requires=libusb1"
-		setupfilename=setup-"$DISTRIB".py
-		;;
-	el*)
-		requires="--requires=python3-pyusb,libusb"
-		setupfilename=setup-el.py
-		;;
-esac
-
 VERSION="$(grep 'version=' "$setupfilename" | sed "s#.* version='## ; s#'.*##")"
 
 cd "${0%\/*}"

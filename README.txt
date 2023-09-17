@@ -115,7 +115,45 @@ poller. The php code uses [mklivestatus](http://mathias-kettner.de/checkmk_lives
 Copy `data/51-blink1.rules` to `/etc/udev/rules.d` to allow all users access to
 the device.
 
+## Container
+
+Actually, the Dockefile is used to build rpm package and an image
+based on almalinux.
+
+To build all, just run
+
+    podman build --tag pyap .
+
+To test the image, you need to get the device path.
+With lsusb, get bus and device values and the path is
+`/dev/bus/usb/<BUS-NUMBER>/<DEV-NUMBER>`
+
+Example:
+
+    $ lsusb | grep blink
+    Bus 001 Device 008: ID 27b8:01ed ThingM blink(1)
+        ^^^        ^^^
+
+    Device path is /dev/bus/usb/001/008
+
+Then run a test that must switch on the blink(1) and allow web access on
+`localhost:8080`:
+
+
+    ( DEVICEPATH="$( lsusb | grep blink | cut -d: -f1 | awk '{ print "/dev/bus/usb/"$2"/"$4 }' )"; \
+    podman run --rm -ti -p 8080:8080 --device="$DEVICEPATH" pyap )
+
+
+
 ## TODO
 
 See [TODO.md](https://github.com/fccagou/pyap/blob/master/TODO.md)
 
+## Changelog
+
+### [v0.6.0] - 2023-09-17
+
+- Add python3 support
+- Add container support
+- Depreciate python2
+- Depreciate rhel 6 release
