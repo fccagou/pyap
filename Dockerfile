@@ -1,7 +1,8 @@
 # syntax = docker/dockerfile:1.3
-ARG RHEL_VERSION=8
+ARG RHELVER=8
+ARG RHELDISTRIB=almalinux
 
-FROM almalinux:$RHEL_VERSION as builder
+FROM $RHELDISTRIB:$RHELVER as builder
 LABEL fr.fccagouu.vendor="The Cagou Corp."
 LABEL org.opencontainers.image.authors="fccagou <fccagou@gmail.com>"
 
@@ -21,11 +22,11 @@ ENV PYTHONPATH=/app
 RUN ./buildrpm
 
 
-FROM almalinux:$RHEL_VERSION
-LABEL fr.fccagouu.vendor="The Cagou Corp."
+FROM $RHELDISTRIB:$RHELVER
+LABEL fr.fccagou.vendor="The Cagou Corp."
 LABEL org.opencontainers.image.authors="fccagou <fccagou@gmail.com>"
 
-COPY --from=builder /app/dist/pyap*noarch.rpm  .
+COPY --from=builder /app/dist/pyap*.rpm  .
 RUN dnf install -y pyap*noarch.rpm
 
 ENTRYPOINT ["/usr/bin/pyap", "--nopid", "--fg", "-v", "--server" ]
