@@ -137,6 +137,17 @@ To build all, just run
 
     podman build --tag pyap .
 
+RHELVER andRHELDITRIB can be used has build parameter. Default value is 8.
+To build all rpm, just run next code and find rpm in mounted directory:
+
+    for v in 8 9
+    do
+        podman build \
+              --build-arg "RHELVER=$v" \
+              --build-arg "RHELDITRIB=redhat" \
+              --tag pyap:"$RHELDITRIB":"$v" .
+    done
+
 To test the image, you need to get the device path.
 With lsusb, get bus and device values and the path is
 `/dev/bus/usb/<BUS-NUMBER>/<DEV-NUMBER>`
